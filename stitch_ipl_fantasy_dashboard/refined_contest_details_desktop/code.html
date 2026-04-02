@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contest Details | EliteStats Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary": "#213145",
+              "tertiary-fixed": "#ffddb8",
+              "primary-fixed-dim": "#c0c1ff",
+              "outline-variant": "#464554",
+              "secondary-fixed": "#d3e4fe",
+              "on-tertiary-container": "#3e2400",
+              "on-primary-fixed-variant": "#2f2ebe",
+              "surface-container-low": "#131b2e",
+              "on-surface-variant": "#c7c4d7",
+              "inverse-surface": "#dae2fd",
+              "error": "#ffb4ab",
+              "on-tertiary-fixed": "#2a1700",
+              "on-error": "#690005",
+              "surface-container": "#171f33",
+              "surface-dim": "#0b1326",
+              "on-secondary-fixed": "#0b1c30",
+              "secondary": "#b7c8e1",
+              "tertiary": "#ffb95f",
+              "surface-container-lowest": "#060e20",
+              "on-primary-fixed": "#07006c",
+              "tertiary-fixed-dim": "#ffb95f",
+              "on-error-container": "#ffdad6",
+              "background": "#0b1326",
+              "primary-container": "#8083ff",
+              "on-surface": "#dae2fd",
+              "on-secondary-container": "#a9bad3",
+              "on-primary": "#1000a9",
+              "secondary-container": "#3a4a5f",
+              "outline": "#908fa0",
+              "error-container": "#93000a",
+              "surface-tint": "#c0c1ff",
+              "surface-container-highest": "#2d3449",
+              "surface": "#0b1326",
+              "surface-container-high": "#222a3d",
+              "on-tertiary-fixed-variant": "#653e00",
+              "secondary-fixed-dim": "#b7c8e1",
+              "on-tertiary": "#472a00",
+              "inverse-on-surface": "#283044",
+              "surface-bright": "#31394d",
+              "on-primary-container": "#0d0096",
+              "surface-variant": "#2d3449",
+              "primary": "#c0c1ff",
+              "on-background": "#dae2fd",
+              "primary-fixed": "#e1e0ff",
+              "on-secondary-fixed-variant": "#38485d",
+              "tertiary-container": "#ca8100",
+              "inverse-primary": "#494bd6"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .tonal-depth-layering { background: linear-gradient(180deg, #131b2e 0%, #0b1326 100%); }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#131b2e] flex flex-col py-8 z-50">
+<div class="px-8 mb-12">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-400 text-xl" style="">insights</span>
+</div>
+<h1 class="text-indigo-400 font-bold font-headline tracking-tight" style="">Global Sports IQ</h1>
+</div>
+<p class="text-slate-500 text-xs font-medium tracking-widest uppercase" style="">Premium Analytics</p>
+</div>
+<nav class="flex-grow space-y-1">
+<!-- Command Center (Inactive) -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" style="">dashboard</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Command Center</span>
+</a>
+<!-- Player Analytics (Inactive) -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" style="">person_search</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Player Analytics</span>
+</a>
+<!-- Team Matrix (Active for Contest Details context) -->
+<a class="bg-indigo-500/10 text-indigo-300 border-r-4 border-indigo-500 flex items-center gap-3 px-6 py-4 cursor-pointer active:bg-indigo-500/20" href="#" style="">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>groups</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Team Matrix</span>
+</a>
+<!-- Live Feed (Inactive) -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" style="">sensors</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Live Feed</span>
+</a>
+<!-- Historical Data (Inactive) -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" style="">history</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Historical Data</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full h-16 sticky top-0 z-40 bg-[#0b1326]/60 backdrop-blur-xl flex justify-between items-center px-8 shadow-[0px_20px_40px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black bg-gradient-to-r from-indigo-300 to-indigo-500 bg-clip-text text-transparent font-['Manrope'] tracking-tight" style="">EliteStats Pro</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4">
+<button class="p-2 text-slate-400 hover:bg-white/5 rounded-full transition-all" style="">
+<span class="material-symbols-outlined" style="">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-white/5 rounded-full transition-all" style="">
+<span class="material-symbols-outlined" style="">settings</span>
+</button>
+</div>
+<div class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-container to-indigo-900 border border-white/10 overflow-hidden">
+<!-- Profile avatar placeholder -->
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="p-12 max-w-7xl mx-auto">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-12">
+<div>
+<nav class="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase mb-3">
+<span class="" style="">Contests</span>
+<span class="" style="">/</span>
+<span class="text-indigo-400" style="">Championship Series X</span>
+</nav>
+<h2 class="text-5xl font-black font-headline text-on-surface leading-tight" style="">Pro League Finals 2024</h2>
+<p class="text-on-surface-variant mt-2 max-w-lg" style="">Advanced metrics tracking for the tier-1 competitive circuit. Private access only.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-3 bg-surface-container-highest text-on-surface font-semibold rounded-xl hover:bg-surface-container-highest/80 transition-all flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-error" style="">logout</span>
+                        Leave Contest
+                    </button>
+</div>
+</div>
+<!-- Bento Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Column: Settings & Lock -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<!-- Invite Code Section -->
+<div class="bg-surface-container-low p-8 rounded-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-8xl" style="">key</span>
+</div>
+<h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-4" style="">Invite Portal</h3>
+<div class="flex flex-col gap-4">
+<div class="bg-surface-container-lowest p-4 rounded-lg flex justify-between items-center border border-white/5">
+<span class="font-mono text-xl font-bold tracking-tighter text-on-surface" style="">ESP-9942-XTQ</span>
+<button class="p-2 hover:bg-white/5 rounded-lg text-primary transition-colors" style="">
+<span class="material-symbols-outlined" style="">content_copy</span>
+</button>
+</div>
+<p class="text-xs text-on-surface-variant italic" style="">Share this code with team captains to grant access.</p>
+</div>
+</div>
+<!-- Creator Controls -->
+<div class="bg-surface-container-low p-8 rounded-xl border-l-4 border-tertiary">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest" style="">Creator Settings</h3>
+<span class="material-symbols-outlined text-tertiary" style="">admin_panel_settings</span>
+</div>
+<div class="space-y-6">
+<!-- Toggle: Contest Lock -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+<div>
+<p class="font-semibold text-on-surface" style="">Lock Registration</p>
+<p class="text-xs text-on-surface-variant" style="">Prevent new teams from joining</p>
+</div>
+<button class="w-12 h-6 bg-tertiary rounded-full relative transition-all" style="">
+<div class="absolute right-1 top-1 w-4 h-4 bg-on-tertiary rounded-full"></div>
+</button>
+</div>
+<!-- Toggle: Live Stats Visibility -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+<div>
+<p class="font-semibold text-on-surface" style="">Public Leaderboard</p>
+<p class="text-xs text-on-surface-variant" style="">Live feed visibility for spectators</p>
+</div>
+<button class="w-12 h-6 bg-surface-container-highest rounded-full relative transition-all" style="">
+<div class="absolute left-1 top-1 w-4 h-4 bg-outline rounded-full"></div>
+</button>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+<div>
+<p class="font-semibold text-on-surface">Allow Duplicate players/ teams</p>
+<p class="text-xs text-on-surface-variant">Enable identical entries across groups</p>
+</div>
+<button class="w-12 h-6 bg-surface-container-highest rounded-full relative transition-all">
+<div class="absolute left-1 top-1 w-4 h-4 bg-outline rounded-full"></div>
+</button>
+</div></div>
+</div>
+</div>
+<!-- Right Column: Member List & Teams -->
+<div class="col-span-12 lg:col-span-8">
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<div class="p-8 border-b border-white/5 flex justify-between items-center">
+<div>
+<h3 class="text-xl font-bold font-headline text-on-surface" style="">Registered Participants</h3>
+<p class="text-sm text-on-surface-variant" style="">14/16 Teams Active</p>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-widest uppercase" style="">Verified Only</span>
+</div>
+</div>
+<!-- Team Table (Modern minimal layout) -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest/50">
+<tr>
+<th class="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest" style="">Team Identity</th>
+<th class="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest" style="">Points</th>
+<th class="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest" style="">Rank<br/></th>
+<th class="px-8 py-4" style=""></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5"><!-- Row 1: Fire Starters -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center font-bold text-orange-400">FS</div>
+<div>
+<p class="font-bold text-on-surface">Fire Starters</p>
+<p class="text-xs text-on-surface-variant">Region: APAC</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium">802</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold">#29</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all">
+<span class="material-symbols-outlined text-outline">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: You (The Architects) -->
+<tr class="hover:bg-white/5 transition-colors group border-l-2 border-primary-container bg-primary/5">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center font-bold text-primary">YU</div>
+<div>
+<p class="font-bold text-on-surface">You (The Architects)</p>
+<p class="text-xs text-indigo-300 font-medium">Host Organization</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium">675</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold">#01</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all">
+<span class="material-symbols-outlined text-primary">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Apex Vanguards -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center font-bold text-indigo-300">AV</div>
+<div>
+<p class="font-bold text-on-surface">Apex Vanguards</p>
+<p class="text-xs text-on-surface-variant">Region: EMEA</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium">472</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-tertiary text-sm" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="text-on-surface font-semibold">#04</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all">
+<span class="material-symbols-outlined text-outline">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Night Stalkers -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center font-bold text-emerald-400">NS</div>
+<div>
+<p class="font-bold text-on-surface">Night Stalkers</p>
+<p class="text-xs text-on-surface-variant">Region: NA West</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium">355</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold">#12</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all">
+<span class="material-symbols-outlined text-outline">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: Steel Titans (New) -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center font-bold text-rose-400">ST</div>
+<div>
+<p class="font-bold text-on-surface">Steel Titans</p>
+<p class="text-xs text-on-surface-variant">Region: EU North</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium">312</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold">#18</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all">
+<span class="material-symbols-outlined text-outline">more_vert</span>
+</button>
+</td>
+</tr></tbody>
+</table>
+</div>
+<div class="p-8 flex justify-center border-t border-white/5">
+<button class="text-xs font-bold text-indigo-400 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2" style="">
+                                View all 14 participants
+                                <span class="material-symbols-outlined text-sm" style="">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

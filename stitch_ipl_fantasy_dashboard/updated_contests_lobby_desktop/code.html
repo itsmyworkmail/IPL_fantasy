@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EliteStats Pro - Contests Lobby</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-secondary": "#213145",
+            "tertiary-fixed": "#ffddb8",
+            "primary-fixed-dim": "#c0c1ff",
+            "outline-variant": "#464554",
+            "secondary-fixed": "#d3e4fe",
+            "on-tertiary-container": "#3e2400",
+            "on-primary-fixed-variant": "#2f2ebe",
+            "surface-container-low": "#131b2e",
+            "on-surface-variant": "#c7c4d7",
+            "inverse-surface": "#dae2fd",
+            "error": "#ffb4ab",
+            "on-tertiary-fixed": "#2a1700",
+            "on-error": "#690005",
+            "surface-container": "#171f33",
+            "surface-dim": "#0b1326",
+            "on-secondary-fixed": "#0b1c30",
+            "secondary": "#b7c8e1",
+            "tertiary": "#ffb95f",
+            "surface-container-lowest": "#060e20",
+            "on-primary-fixed": "#07006c",
+            "tertiary-fixed-dim": "#ffb95f",
+            "on-error-container": "#ffdad6",
+            "background": "#0b1326",
+            "primary-container": "#8083ff",
+            "on-surface": "#dae2fd",
+            "on-secondary-container": "#a9bad3",
+            "on-primary": "#1000a9",
+            "secondary-container": "#3a4a5f",
+            "outline": "#908fa0",
+            "error-container": "#93000a",
+            "surface-tint": "#c0c1ff",
+            "surface-container-highest": "#2d3449",
+            "surface": "#0b1326",
+            "surface-container-high": "#222a3d",
+            "on-tertiary-fixed-variant": "#653e00",
+            "secondary-fixed-dim": "#b7c8e1",
+            "on-tertiary": "#472a00",
+            "inverse-on-surface": "#283044",
+            "surface-bright": "#31394d",
+            "on-primary-container": "#0d0096",
+            "surface-variant": "#2d3449",
+            "primary": "#c0c1ff",
+            "on-background": "#dae2fd",
+            "primary-fixed": "#e1e0ff",
+            "on-secondary-fixed-variant": "#38485d",
+            "tertiary-container": "#ca8100",
+            "inverse-primary": "#494bd6"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #0b1326;
+      color: #dae2fd;
+      font-family: 'Inter', sans-serif;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-effect {
+      backdrop-filter: blur(24px);
+    }
+    .no-line {
+      border: none !important;
+    }
+  </style>
+</head>
+<body class="flex min-h-screen bg-surface">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#131b2e] flex flex-col py-8 z-50">
+<div class="px-6 mb-12">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary" data-icon="groups">groups</span>
+</div>
+<div>
+<h1 class="text-indigo-400 font-bold font-headline text-lg">Global Sports IQ</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Premium Analytics</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Inter'] font-medium text-sm">Command Center</span>
+</div>
+<div class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="person_search">person_search</span>
+<span class="font-['Inter'] font-medium text-sm">Player Analytics</span>
+</div>
+<div class="bg-indigo-500/10 text-indigo-300 border-r-4 border-indigo-500 flex items-center gap-3 px-6 py-4 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-['Inter'] font-medium text-sm">Team Matrix</span>
+</div>
+<div class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span class="font-['Inter'] font-medium text-sm">Live Feed</span>
+</div>
+<div class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-['Inter'] font-medium text-sm">Historical Data</span>
+</div>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-64 min-h-screen bg-surface flex flex-col">
+<!-- TopNavBar -->
+<header class="w-full h-16 sticky top-0 z-40 bg-[#0b1326]/60 backdrop-blur-xl shadow-[0px_20px_40px_rgba(0,0,0,0.4)] flex justify-between items-center px-8">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black bg-gradient-to-r from-indigo-300 to-indigo-500 bg-clip-text text-transparent font-['Manrope'] tracking-tight">EliteStats Pro</span>
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-sm">search</span>
+<input class="bg-surface-container-lowest border-none rounded-full py-1.5 pl-10 pr-4 text-sm w-64 focus:ring-1 focus:ring-primary/20 placeholder:text-slate-500" placeholder="Find contests..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-slate-400">
+<span class="material-symbols-outlined hover:text-slate-100 cursor-pointer transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined hover:text-slate-100 cursor-pointer transition-colors" data-icon="settings">settings</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden cursor-pointer active:scale-95 transition-transform">
+<img alt="Professional user profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXpdciAcRPzPK8SpWvSCsANVSXM6RXWb7cOjiYYl8BsATrsuksUIh6-ZrsRUJFZmNzyiGeRBiuUuZxd00SW2A3cLqM0SXYD47ZE4Cv_XtHT_yQ-Q3fsbuWVetb_ioiMphxGIj0rTq8n-YFHuqsCqyk6d03s69e11pM_QXir4umdPYk3hDeRWj4AUYEA-_ZrR9_GIhbk-GwGaR2VC3V-nWB3QaSpze1ft-aYvRzTqeMS4SbJdhMTZ1Up7fjCiy-hAtSuCJvLz034V4"/>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="p-10 max-w-7xl mx-auto w-full space-y-12">
+<!-- Hero Actions -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Create Section -->
+<div class="bg-surface-container-low p-8 rounded-full relative overflow-hidden flex items-center justify-between group cursor-pointer active:scale-[0.98] transition-all">
+<div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent"></div>
+<div class="relative z-10">
+<h2 class="font-headline text-3xl font-extrabold text-indigo-300">Create Contest</h2>
+<p class="text-slate-400 mt-2 max-w-xs">Host your own private tournament with custom rules.</p>
+</div>
+<div class="relative z-10 bg-primary-container p-4 rounded-full shadow-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-on-primary text-3xl" data-icon="add">add</span>
+</div>
+</div>
+<!-- Join Section -->
+<div class="bg-surface-container-low p-8 rounded-full relative overflow-hidden flex items-center justify-between group cursor-pointer active:scale-[0.98] transition-all">
+<div class="absolute inset-0 bg-gradient-to-br from-tertiary/5 to-transparent"></div>
+<div class="relative z-10">
+<h2 class="font-headline text-3xl font-extrabold text-tertiary">Join Private</h2>
+<p class="text-slate-400 mt-2 max-w-xs">Enter an invite code to join a colleague's or influencer's private room.</p>
+</div>
+<div class="relative z-10 bg-surface-container-highest p-4 rounded-full shadow-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-tertiary text-3xl" data-icon="key">key</span>
+</div>
+</div>
+</section>
+<!-- Active Contests Grid -->
+<section class="space-y-8">
+<div class="flex justify-between items-end">
+<div class="space-y-1">
+<h3 class="font-headline text-display-md text-4xl font-bold tracking-tight">Active Contests</h3>
+<p class="text-slate-500 text-sm">Real-time competitive pools across major leagues</p>
+</div>
+<div class="flex gap-2">
+<span class="px-4 py-1.5 bg-surface-container-highest rounded-full text-xs font-bold text-slate-300 cursor-pointer">All</span>
+<span class="px-4 py-1.5 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-bold border border-indigo-500/30 cursor-pointer">Created</span>
+<span class="px-4 py-1.5 bg-surface-container-highest rounded-full text-xs font-bold text-slate-300 cursor-pointer">Joined</span>
+</div>
+</div>
+<!-- Bento Style Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1: Major Event -->
+<div class="lg:col-span-2 bg-surface-container-high rounded-xl p-8 relative overflow-hidden group hover:bg-surface-container-highest transition-all">
+<div class="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
+<div class="flex justify-between items-start mb-12">
+<div class="bg-tertiary/10 text-tertiary px-3 py-1 rounded-full flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="text-[10px] font-black uppercase tracking-widest">Featured High Roller</span>
+</div>
+<span class="text-slate-500 font-headline text-2xl font-black">#001</span>
+</div>
+<div class="space-y-6">
+<h4 class="text-4xl font-black font-headline tracking-tighter leading-none">THE WORLD BOWL ELITE SERIES</h4>
+<div class="flex items-center gap-8">
+<div>
+<p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Participants</p>
+<p class="text-3xl font-black text-on-surface font-headline">48/50</p>
+</div>
+</div>
+</div>
+<button class="mt-10 w-full py-4 bg-primary text-on-primary font-black rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-2 group">
+              JOIN CONTEST
+              <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-high rounded-xl p-6 flex flex-col justify-between hover:bg-surface-container-highest transition-all">
+<div>
+<div class="flex justify-between items-center mb-6">
+<span class="px-2 py-0.5 bg-surface-container-highest text-slate-400 text-[10px] font-bold rounded uppercase">Weekly Classic</span>
+<span class="material-symbols-outlined text-slate-500" data-icon="more_horiz">more_horiz</span>
+</div>
+<h4 class="text-xl font-bold font-headline mb-4">NBA Midweek Sprint</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-slate-500">Filled 64%</span>
+<div class="w-32 h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-500" style="width: 64%"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-6 w-full py-3 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 font-bold rounded-xl active:scale-95 transition-all text-sm">
+              ENTER
+            </button>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-high rounded-xl p-6 flex flex-col justify-between hover:bg-surface-container-highest transition-all">
+<div>
+<div class="flex justify-between items-center mb-6">
+<span class="px-2 py-0.5 bg-surface-container-highest text-slate-400 text-[10px] font-bold rounded uppercase">Rookie Tier</span>
+<span class="material-symbols-outlined text-slate-500" data-icon="more_horiz">more_horiz</span>
+</div>
+<h4 class="text-xl font-bold font-headline mb-4">MLC Amateur Open</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-slate-500">Filled 88%</span>
+<div class="w-32 h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-500" style="width: 88%"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-6 w-full py-3 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 font-bold rounded-xl active:scale-95 transition-all text-sm">
+              ENTER
+            </button>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-high rounded-xl p-6 flex flex-col justify-between hover:bg-surface-container-highest transition-all">
+<div>
+<div class="flex justify-between items-center mb-6">
+<span class="px-2 py-0.5 bg-surface-container-highest text-slate-400 text-[10px] font-bold rounded uppercase">Pro Qualifier</span>
+<span class="material-symbols-outlined text-slate-500" data-icon="more_horiz">more_horiz</span>
+</div>
+<h4 class="text-xl font-bold font-headline mb-4">Champions League Special</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-slate-500">Filled 12%</span>
+<div class="w-32 h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-500" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-6 w-full py-3 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 font-bold rounded-xl active:scale-95 transition-all text-sm">
+              ENTER
+            </button>
+</div>
+<!-- Card 5 -->
+<div class="bg-surface-container-high rounded-xl p-6 flex flex-col justify-between hover:bg-surface-container-highest transition-all">
+<div>
+<div class="flex justify-between items-center mb-6">
+<span class="px-2 py-0.5 bg-surface-container-highest text-slate-400 text-[10px] font-bold rounded uppercase">Daily Grinder</span>
+<span class="material-symbols-outlined text-slate-500" data-icon="more_horiz">more_horiz</span>
+</div>
+<h4 class="text-xl font-bold font-headline mb-4">Premier League 50/50</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-slate-500">Filled 95%</span>
+<div class="w-32 h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-500" style="width: 95%"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-6 w-full py-3 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 font-bold rounded-xl active:scale-95 transition-all text-sm">
+              ENTER
+            </button>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

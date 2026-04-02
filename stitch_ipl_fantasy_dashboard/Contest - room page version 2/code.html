@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contest Details | EliteStats Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary": "#213145",
+              "tertiary-fixed": "#ffddb8",
+              "primary-fixed-dim": "#c0c1ff",
+              "outline-variant": "#464554",
+              "secondary-fixed": "#d3e4fe",
+              "on-tertiary-container": "#3e2400",
+              "on-primary-fixed-variant": "#2f2ebe",
+              "surface-container-low": "#131b2e",
+              "on-surface-variant": "#c7c4d7",
+              "inverse-surface": "#dae2fd",
+              "error": "#ffb4ab",
+              "on-tertiary-fixed": "#2a1700",
+              "on-error": "#690005",
+              "surface-container": "#171f33",
+              "surface-dim": "#0b1326",
+              "on-secondary-fixed": "#0b1c30",
+              "secondary": "#b7c8e1",
+              "tertiary": "#ffb95f",
+              "surface-container-lowest": "#060e20",
+              "on-primary-fixed": "#07006c",
+              "tertiary-fixed-dim": "#ffb95f",
+              "on-error-container": "#ffdad6",
+              "background": "#0b1326",
+              "primary-container": "#8083ff",
+              "on-surface": "#dae2fd",
+              "on-secondary-container": "#a9bad3",
+              "on-primary": "#1000a9",
+              "secondary-container": "#3a4a5f",
+              "outline": "#908fa0",
+              "error-container": "#93000a",
+              "surface-tint": "#c0c1ff",
+              "surface-container-highest": "#2d3449",
+              "surface": "#0b1326",
+              "surface-container-high": "#222a3d",
+              "on-tertiary-fixed-variant": "#653e00",
+              "secondary-fixed-dim": "#b7c8e1",
+              "on-tertiary": "#472a00",
+              "inverse-on-surface": "#283044",
+              "surface-bright": "#31394d",
+              "on-primary-container": "#0d0096",
+              "surface-variant": "#2d3449",
+              "primary": "#c0c1ff",
+              "on-background": "#dae2fd",
+              "primary-fixed": "#e1e0ff",
+              "on-secondary-fixed-variant": "#38485d",
+              "tertiary-container": "#ca8100",
+              "inverse-primary": "#494bd6"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .tonal-depth-layering { background: linear-gradient(180deg, #131b2e 0%, #0b1326 100%); }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#131b2e] flex flex-col py-8 z-50">
+<div class="px-8 mb-12">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-400 text-xl" style="">insights</span>
+</div>
+<h1 class="text-indigo-400 font-bold font-headline tracking-tight" style="">CricTrack</h1>
+</div>
+<p class="text-slate-500 text-xs font-medium tracking-widest uppercase" style="">ipl fantasy points</p>
+</div>
+<nav class="flex-grow space-y-1">
+<!-- Command Center (Inactive) -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" style="">dashboard</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Lobby</span>
+</a>
+<!-- Player Analytics (Inactive) -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" style="">person_search</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Contests</span>
+</a>
+<!-- Team Matrix (Active for Contest Details context) -->
+<a class="bg-indigo-500/10 text-indigo-300 border-r-4 border-indigo-500 flex items-center gap-3 px-6 py-4 cursor-pointer active:bg-indigo-500/20" href="#" style="">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>groups</span>
+<span class="font-['Inter'] font-medium text-sm" style="">My Teams</span>
+</a>
+<!-- Live Feed (Inactive) -->
+<!-- Historical Data (Inactive) -->
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full h-16 sticky top-0 z-40 bg-[#0b1326]/60 backdrop-blur-xl flex justify-between items-center px-8 shadow-[0px_20px_40px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black bg-gradient-to-r from-indigo-300 to-indigo-500 bg-clip-text text-transparent font-['Manrope'] tracking-tight" style="">CricTrack</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4">
+<button class="p-2 text-slate-400 hover:bg-white/5 rounded-full transition-all" style="">
+<span class="material-symbols-outlined" style="">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-white/5 rounded-full transition-all" style="">
+<span class="material-symbols-outlined" style="">settings</span>
+</button>
+</div>
+<div class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-container to-indigo-900 border border-white/10 overflow-hidden">
+<!-- Profile avatar placeholder -->
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="p-12 max-w-7xl mx-auto">
+<!-- Header Section -->
+<div class="mb-12">
+<div class="flex items-center justify-between mb-3">
+<nav class="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase items-center">
+<span class="" style="">Contests</span>
+<span class="" style="">/</span>
+<span class="text-indigo-400" style="">Friends contest ipl 2026</span>
+</nav>
+<button class="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-full border border-error/20 transition-all" style="">
+<span class="material-symbols-outlined !text-sm" style="">logout</span> Leave Contest 
+</button>
+</div>
+<div class="flex justify-between items-start gap-12">
+<div class="flex-grow">
+<h2 class="text-5xl font-black font-headline text-on-surface leading-tight" style="">Friends contest IPL 2026</h2>
+<p class="text-on-surface-variant mt-2 max-w-lg" style="">A single line description about anything</p>
+</div>
+<div class="shrink-0 pt-2">
+<div class="bg-surface-container-high/50 border border-white/5 p-2 rounded-lg flex items-center gap-3 backdrop-blur-sm group hover:border-indigo-500/30 transition-all">
+<div class="flex flex-col">
+<span class="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1" style="">Invite Code</span>
+<span class="font-mono text-sm font-bold text-on-surface" style="">ESP-9942-XTQ</span>
+</div>
+<button class="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors" style="" title="Copy Code">
+<span class="material-symbols-outlined !text-sm" style="">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Column: Member List & Teams (Swapped Position) -->
+<div class="col-span-12 lg:col-span-8 order-2 lg:order-1">
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<div class="p-8 border-b border-white/5 flex justify-between items-center">
+<div>
+<h3 class="text-xl font-bold font-headline text-on-surface" style="">Registered Participants</h3>
+<p class="text-sm text-on-surface-variant" style="">Total Teams: 14</p>
+</div>
+</div>
+<!-- Team Table (Modified column order: Rank, Team Identity, Points) -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest/50">
+<tr>
+<th class="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest" style="">pos</th>
+<th class="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest" style="">teams</th>
+<th class="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest" style="">Points</th>
+<th class="px-8 py-4" style=""></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Row 1: Fire Starters -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold" style="">1</span>
+</div>
+</td>
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center font-bold text-orange-400" style="">FS</div>
+<div>
+<p class="font-bold text-on-surface" style="">John David</p>
+<p class="text-xs text-on-surface-variant" style="">RCB</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium" style="">802</td>
+<td class="px-8 py-6 text-right" style=""><div class="relative dropdown-container">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline hover:text-on-surface" onclick="toggleDropdown(this)">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+<div class="options-dropdown hidden absolute right-0 top-full mt-1 w-32 bg-surface-container-high border border-white/10 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined !text-sm">visibility</span> View team
+    </button>
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-error hover:bg-error/10 transition-colors flex items-center gap-2 border-t border-white/5">
+<span class="material-symbols-outlined !text-sm">person_remove</span> Remove
+    </button>
+</div>
+</div></td>
+</tr>
+<!-- Row 2: You (The Architects) -->
+<tr class="hover:bg-white/5 transition-colors group border-l-2 border-primary-container bg-primary/5">
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold" style="">2</span>
+</div>
+</td>
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center font-bold text-primary" style="">YU</div>
+<div>
+<p class="font-bold text-on-surface" style="">Carl (Host)</p>
+<p class="text-xs text-indigo-300 font-medium" style="">MI</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium" style="">675</td>
+<td class="px-8 py-6 text-right" style=""><div class="relative dropdown-container">
+<button class="p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline hover:text-on-surface" onclick="toggleDropdown(this)">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+<div class="options-dropdown hidden absolute right-0 top-full mt-1 w-32 bg-surface-container-high border border-white/10 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined !text-sm">visibility</span> View team
+    </button>
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-error hover:bg-error/10 transition-colors flex items-center gap-2 border-t border-white/5">
+<span class="material-symbols-outlined !text-sm">person_remove</span> Remove
+    </button>
+</div>
+</div></td>
+</tr>
+<!-- Row 3: Apex Vanguards -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold" style="">3</span>
+</div>
+</td>
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center font-bold text-indigo-300" style="">AV</div>
+<div>
+<p class="font-bold text-on-surface" style="">Andria Col</p>
+<p class="text-xs text-on-surface-variant" style="">PBKS</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium" style="">472</td>
+<td class="px-8 py-6 text-right" style=""><div class="relative dropdown-container">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline hover:text-on-surface" onclick="toggleDropdown(this)">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+<div class="options-dropdown hidden absolute right-0 top-full mt-1 w-32 bg-surface-container-high border border-white/10 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined !text-sm">visibility</span> View team
+    </button>
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-error hover:bg-error/10 transition-colors flex items-center gap-2 border-t border-white/5">
+<span class="material-symbols-outlined !text-sm">person_remove</span> Remove
+    </button>
+</div>
+</div></td>
+</tr>
+<!-- Row 4: Night Stalkers -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold" style="">4</span>
+</div>
+</td>
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center font-bold text-emerald-400" style="">NS</div>
+<div>
+<p class="font-bold text-on-surface" style="">Nathan Alke</p>
+<p class="text-xs text-on-surface-variant" style="">SRH</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium" style="">355</td>
+<td class="px-8 py-6 text-right" style=""><div class="relative dropdown-container">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline hover:text-on-surface" onclick="toggleDropdown(this)">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+<div class="options-dropdown hidden absolute right-0 top-full mt-1 w-32 bg-surface-container-high border border-white/10 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined !text-sm">visibility</span> View team
+    </button>
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-error hover:bg-error/10 transition-colors flex items-center gap-2 border-t border-white/5">
+<span class="material-symbols-outlined !text-sm">person_remove</span> Remove
+    </button>
+</div>
+</div></td>
+</tr>
+<!-- Row 5: Steel Titans -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-1">
+<span class="text-on-surface font-semibold" style="">5</span>
+</div>
+</td>
+<td class="px-8 py-6" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center font-bold text-rose-400" style="">ST</div>
+<div>
+<p class="font-bold text-on-surface" style="">Bell Clave</p>
+<p class="text-xs text-on-surface-variant" style="">KKR</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6 text-on-surface-variant font-medium" style="">312</td>
+<td class="px-8 py-6 text-right" style=""><div class="relative dropdown-container">
+<button class="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline hover:text-on-surface" onclick="toggleDropdown(this)">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+<div class="options-dropdown hidden absolute right-0 top-full mt-1 w-32 bg-surface-container-high border border-white/10 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined !text-sm">visibility</span> View team
+    </button>
+<button class="w-full text-left px-4 py-2 text-xs font-medium text-error hover:bg-error/10 transition-colors flex items-center gap-2 border-t border-white/5">
+<span class="material-symbols-outlined !text-sm">person_remove</span> Remove
+    </button>
+</div>
+</div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-8 flex justify-center border-t border-white/5">
+<button class="text-xs font-bold text-indigo-400 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2" style="">
+    View all 14 participants
+    <span class="material-symbols-outlined text-sm" style="">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Column: Management & Settings (Swapped Position) -->
+<div class="col-span-12 lg:col-span-4 space-y-6 order-1 lg:order-2">
+<!-- Manage Team Section -->
+<div class="bg-surface-container-low p-8 rounded-xl border-l-4 border-primary">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest" style="">Manage Team</h3>
+<button class="text-[10px] font-bold text-primary hover:bg-primary/10 uppercase tracking-widest px-3 py-1.5 border border-primary/30 rounded-lg transition-all shadow-sm shadow-primary/10">Done</button>
+</div>
+<div class="space-y-6">
+<!-- First Dropdown: Choose Team -->
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest" style="">Choose Team</label>
+<div class="relative group">
+<select class="w-full bg-surface-container-lowest border border-white/10 rounded-lg py-3 px-4 text-sm font-medium text-on-surface appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer">
+<option value="architects">The Architects</option>
+<option value="apex">Apex Vanguards</option>
+<option value="stalkers">Night Stalkers</option>
+</select>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
+<span class="material-symbols-outlined text-sm" style="">expand_more</span>
+</div>
+</div>
+<p class="text-[10px] text-on-surface-variant leading-relaxed" style=""><br/></p>
+</div>
+<!-- Second Dropdown: Select IPL Team -->
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest" style="">Select IPL Team</label>
+<div class="relative group">
+<select class="w-full bg-surface-container-lowest border border-white/10 rounded-lg py-3 px-4 text-sm font-medium text-on-surface appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer">
+<option value="">Choose IPL franchise</option>
+<option value="csk">Chennai Super Kings</option>
+<option value="dc">Delhi Capitals</option>
+<option value="gt">Gujarat Titans</option>
+<option value="kkr">Kolkata Knight Riders</option>
+<option value="lsg">Lucknow Super Giants</option>
+<option value="mi">Mumbai Indians</option>
+<option value="pbks">Punjab Kings</option>
+<option value="rr">Rajasthan Royals</option>
+<option value="rcb">Royal Challengers Bengaluru</option>
+<option value="srh">Sunrisers Hyderabad</option>
+</select>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
+<span class="material-symbols-outlined text-sm" style="">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Creator Controls -->
+<div class="bg-surface-container-low p-8 rounded-xl border-l-4 border-tertiary">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest" style="">admin Settings</h3>
+<span class="material-symbols-outlined text-tertiary" style="">admin_panel_settings</span>
+</div>
+<div class="space-y-6">
+<!-- Toggle: Contest Lock -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+<div>
+<p class="font-semibold text-on-surface" style="">Lock Room</p>
+<p class="text-xs text-on-surface-variant" style="">People cannot join</p>
+</div>
+<button class="w-12 h-6 bg-tertiary rounded-full relative transition-all" style="">
+<div class="absolute right-1 top-1 w-4 h-4 bg-on-tertiary rounded-full"></div>
+</button>
+</div>
+<!-- Toggle: Modify Teams -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+<div>
+<p class="font-semibold text-on-surface" style="">Modify teams</p>
+<p class="text-xs text-on-surface-variant" style="">Allow people to change their team</p>
+</div>
+<button class="w-12 h-6 bg-surface-container-highest rounded-full relative transition-all" style="">
+<div class="absolute left-1 top-1 w-4 h-4 bg-outline rounded-full"></div>
+</button>
+</div>
+<!-- Toggle: Allow Duplicates -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+<div>
+<p class="font-semibold text-on-surface" style="">Allow Duplicates</p>
+<p class="text-xs text-on-surface-variant" style="">Players in teams</p>
+</div>
+<button class="w-12 h-6 bg-surface-container-highest rounded-full relative transition-all" style="">
+<div class="absolute left-1 top-1 w-4 h-4 bg-outline rounded-full"></div>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+  function toggleDropdown(button) {
+    const dropdown = button.nextElementSibling;
+    const allDropdowns = document.querySelectorAll('.options-dropdown');
+    allDropdowns.forEach(d => {
+      if (d !== dropdown) d.classList.add('hidden');
+    });
+    dropdown.classList.toggle('hidden');
+  }
+  
+  // Close dropdowns when clicking outside
+  window.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-container')) {
+      document.querySelectorAll('.options-dropdown').forEach(d => d.classList.add('hidden'));
+    }
+  });
+</script></body></html>

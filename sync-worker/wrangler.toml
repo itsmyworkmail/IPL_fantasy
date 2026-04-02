@@ -1,0 +1,11 @@
+name = "fantasy-data-sync"
+main = "src/index.ts"
+compatibility_date = "2024-03-20"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/5 * * * *", "0 0 * * *"]
+
+[vars]
+SUPABASE_URL = "https://bximuboykndvqoljvvtr.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4aW11Ym95a25kdnFvbGp2dnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODAzNTksImV4cCI6MjA5MDQ1NjM1OX0.QiAbO4FTuoFhu5ppl0in30CeeIvCW56fND_ol1OaJ1k"

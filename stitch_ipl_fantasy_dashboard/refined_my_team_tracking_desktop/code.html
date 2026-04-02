@@ -1,0 +1,303 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>EliteStats Pro - Team Matrix</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary": "#213145",
+                        "tertiary-fixed": "#ffddb8",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "outline-variant": "#464554",
+                        "secondary-fixed": "#d3e4fe",
+                        "on-tertiary-container": "#3e2400",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-container-low": "#131b2e",
+                        "on-surface-variant": "#c7c4d7",
+                        "inverse-surface": "#dae2fd",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-error": "#690005",
+                        "surface-container": "#171f33",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed": "#0b1c30",
+                        "secondary": "#b7c8e1",
+                        "tertiary": "#ffb95f",
+                        "surface-container-lowest": "#060e20",
+                        "on-primary-fixed": "#07006c",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-error-container": "#ffdad6",
+                        "background": "#0b1326",
+                        "primary-container": "#8083ff",
+                        "on-surface": "#dae2fd",
+                        "on-secondary-container": "#a9bad3",
+                        "on-primary": "#1000a9",
+                        "secondary-container": "#3a4a5f",
+                        "outline": "#908fa0",
+                        "error-container": "#93000a",
+                        "surface-tint": "#c0c1ff",
+                        "surface-container-highest": "#2d3449",
+                        "surface": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-tertiary": "#472a00",
+                        "inverse-on-surface": "#283044",
+                        "surface-bright": "#31394d",
+                        "on-primary-container": "#0d0096",
+                        "surface-variant": "#2d3449",
+                        "primary": "#c0c1ff",
+                        "on-background": "#dae2fd",
+                        "primary-fixed": "#e1e0ff",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "tertiary-container": "#ca8100",
+                        "inverse-primary": "#494bd6"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0b1326;
+            color: #dae2fd;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0b1326; }
+        ::-webkit-scrollbar-thumb { background: #2d3449; border-radius: 10px; }
+    </style>
+</head>
+<body class="font-body selection:bg-primary/30">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#131b2e] flex flex-col py-8 z-50">
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-300 to-indigo-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary" data-icon="analytics" style="">analytics</span>
+</div>
+<div>
+<h2 class="text-indigo-400 font-bold font-headline leading-none" style="">Global Sports IQ</h2>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1" style="">Premium Analytics</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Navigation Items -->
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" data-icon="dashboard" style="">dashboard</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Command Center</span>
+</a>
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" data-icon="person_search" style="">person_search</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Player Analytics</span>
+</a>
+<!-- Active State: Team Matrix -->
+<a class="bg-indigo-500/10 text-indigo-300 border-r-4 border-indigo-500 flex items-center gap-3 px-6 py-4" href="#" style="">
+<span class="material-symbols-outlined" data-icon="groups" style="">groups</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Team Matrix</span>
+</a>
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" data-icon="sensors" style="">sensors</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Live Feed</span>
+</a>
+<a class="text-slate-400 flex items-center gap-3 px-6 py-4 hover:bg-white/5 hover:text-white transition-all" href="#" style="">
+<span class="material-symbols-outlined" data-icon="history" style="">history</span>
+<span class="font-['Inter'] font-medium text-sm" style="">Historical Data</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+<!-- Removed Generate Report button and Help Center link -->
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopAppBar (Authority: JSON) -->
+<header class="w-full h-16 sticky top-0 z-40 bg-[#0b1326]/60 backdrop-blur-xl flex justify-between items-center px-8 shadow-[0px_20px_40px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black bg-gradient-to-r from-indigo-300 to-indigo-500 bg-clip-text text-transparent font-['Manrope'] tracking-tight" style="">EliteStats Pro</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full text-slate-400 hover:bg-white/5 active:scale-95 transition-all" style="">
+<span class="material-symbols-outlined" data-icon="notifications" style="">notifications</span>
+</button>
+<button class="p-2 rounded-full text-slate-400 hover:bg-white/5 active:scale-95 transition-all" style="">
+<span class="material-symbols-outlined" data-icon="settings" style="">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/20 overflow-hidden ml-2">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9APZeks1GQsglvr00rUHkqDAQwhBHVuVJ_cm2pyuSHxD_Pxy6zV2XgMaG8gfb2Z4o49HFDkhuyqjaoVYdsITTxERHpoMawUlf4iSIFh0axA1jqxuB4UwzB7QxFwn5ub2D5i1oTUKf9R7F_gJigrjOKkTVyoOajoj_OzmNKvweQG4cXVYlr8ajiLz4VqpKZ0Aw-RS3T3KJhFVCNf6v600lOYfuEXj8kCb9gVMUBTLQykdPMY54bbWjPRQCsg5e3e7STaqMIVnCkzo" style="">
+</div>
+</div>
+</header>
+<section class="p-8 space-y-8 pb-16">
+<!-- Hero Header: Points & Status (Editorial Layout) -->
+<div class="grid grid-cols-12 gap-6 items-end">
+<div class="col-span-8">
+<span class="text-indigo-400 font-bold uppercase tracking-widest text-xs" style="">Season Progress</span>
+<h1 class="text-7xl font-headline font-extrabold text-on-surface tracking-tighter mt-2" style="">
+                        1,248.5 <span class="text-2xl text-slate-500 font-normal tracking-normal" style="">PTS</span>
+</h1>
+<div class="flex items-center gap-4 mt-4">
+<div class="flex items-center gap-2 px-3 py-1 bg-tertiary/10 rounded-full">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="text-tertiary text-xs font-bold uppercase" style="">Live: Gameweek 24</span>
+</div>
+</div>
+</div>
+<div class="col-span-4 flex justify-end">
+<div class="bg-surface-container-low p-6 rounded-2xl w-full max-w-xs border-l-4 border-indigo-500">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1" style="">Upcoming Match</p>
+<h3 class="text-lg font-headline font-bold text-on-surface" style="">Vanguards vs Titans</h3>
+<p class="text-sm text-slate-400 mt-1" style="">Today at 20:45 GMT</p>
+<div class="mt-4 flex -space-x-2">
+<div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[10px] font-bold" style="">VG</div>
+<div class="w-8 h-8 rounded-full bg-slate-700 border border-outline-variant/30 flex items-center justify-center text-[10px] font-bold" style="">TT</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid Content -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Squad List (Dense Data) -->
+<div class="col-span-7 bg-surface-container-low rounded-3xl overflow-hidden flex flex-col">
+<!-- Team Tabs Header -->
+<div class="bg-surface-container-high px-8 pt-6 pb-0">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-xl font-headline font-bold" style="">Active Squad</h2>
+<div class="flex gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 text-xs font-bold border border-indigo-500/30 hover:bg-indigo-500/20 transition-all" style="">
+<span class="material-symbols-outlined text-sm" data-icon="edit" style="">edit</span>
+                                Edit Team
+                            </button>
+<button class="text-indigo-400 text-sm font-semibold hover:text-indigo-300 transition-colors" style="">Transfer Market</button>
+</div>
+</div>
+<div class="flex gap-6 overflow-x-auto no-scrollbar">
+<button class="pb-3 text-indigo-300 border-b-2 border-indigo-500 text-xs font-bold uppercase tracking-wider whitespace-nowrap" style="">Team 1</button>
+<button class="pb-3 text-slate-500 hover:text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors" style="">Team 2</button>
+<button class="pb-3 text-slate-500 hover:text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors" style="">Team 3</button>
+<button class="pb-3 text-slate-500 hover:text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors" style="">Team 4</button>
+<button class="pb-3 text-slate-500 hover:text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors" style="">Team 5</button>
+</div>
+</div>
+<div class="p-4 flex-1">
+<table class="w-full text-left">
+<thead>
+<tr class="text-slate-500 text-[10px] uppercase tracking-widest border-b border-outline-variant/10">
+<th class="px-4 py-3 font-bold" style="">Player</th>
+<th class="px-4 py-3 font-bold" style="">Skill</th>
+<th class="px-4 py-3 font-bold" style="">IPL Team</th>
+<th class="px-4 py-3 font-bold text-right" style="">Points</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-4 py-4 font-semibold text-on-surface" style="">Virat Kohli</td>
+<td class="px-4 py-4 text-slate-400" style="">Bat</td>
+<td class="px-4 py-4 text-slate-400" style="">RCB</td>
+<td class="px-4 py-4 text-right font-headline font-bold text-indigo-300" style="">145.0</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-4 py-4 font-semibold text-on-surface" style="">Hardik Pandya</td>
+<td class="px-4 py-4 text-slate-400" style="">AR</td>
+<td class="px-4 py-4 text-slate-400" style="">MI</td>
+<td class="px-4 py-4 text-right font-headline font-bold text-on-surface" style="">98.5</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-4 py-4 font-semibold text-on-surface" style="">M.S. Dhoni</td>
+<td class="px-4 py-4 text-slate-400" style="">Bat</td>
+<td class="px-4 py-4 text-slate-400" style="">CSK</td>
+<td class="px-4 py-4 text-right font-headline font-bold text-on-surface" style="">112.0</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-4 py-4 font-semibold text-on-surface" style="">Jasprit Bumrah</td>
+<td class="px-4 py-4 text-slate-400" style="">Bow</td>
+<td class="px-4 py-4 text-slate-400" style="">MI</td>
+<td class="px-4 py-4 text-right font-headline font-bold text-on-surface" style="">86.0</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-4 py-4 font-semibold text-on-surface" style="">Rashid Khan</td>
+<td class="px-4 py-4 text-slate-400" style="">Bow</td>
+<td class="px-4 py-4 text-slate-400" style="">GT</td>
+<td class="px-4 py-4 text-right font-headline font-bold text-on-surface" style="">122.5</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Distribution Chart (Visualization) -->
+<div class="col-span-5 flex flex-col gap-6">
+<div class="bg-surface-container-high p-8 rounded-3xl flex-1 relative overflow-hidden group">
+<div class="relative z-10">
+<h2 class="text-xl font-headline font-bold mb-6" style="">Team Distribution</h2>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+<span class="" style="">Mumbai Indians (MI)</span>
+<span class="text-indigo-300" style="">4 - 35%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-500 w-[35%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+<span class="" style="">Chennai Super Kings (CSK)</span>
+<span class="text-indigo-300" style="">3 - 25%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-400 w-[25%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+<span class="" style="">Royal Challengers (RCB)</span>
+<span class="text-indigo-300" style="">1 - 20%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-indigo-300 w-[20%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+<span class="" style="">Gujarat Titans (GT)</span>
+<span class="text-indigo-300" style="">1 - 10%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[10%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+<span class="" style="">Others</span>
+<span class="text-indigo-300" style="">1 - 10%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-slate-600 w-[10%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Abstract background graphic -->
+<div class="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-500"></div>
+</div>
+<!-- Performance Insight Card -->
+</div>
+</div>
+<!-- Weekly Trend section removed per request -->
+</section>
+</main>
+</body></html>
