@@ -193,7 +193,7 @@ export function useTeam(profileId?: string) {
        if (status) {
           await supabase.from('teams').update({ show_in_lobby: false }).eq('profile_id', user.id);
        }
-       const { data, error } = await supabase
+       const { error } = await supabase
          .from('teams')
          .update({ show_in_lobby: status })
          .eq('id', id)

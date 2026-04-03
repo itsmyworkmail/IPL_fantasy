@@ -11,7 +11,7 @@ import { usePlayerMatchHistory, getRelativeMatchPoints } from '@/hooks/usePlayer
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import { formatSkillName } from '@/utils/formatters';
-import { UserMinus, Trash2, Eye, BadgeInfo, LogOut, Copy, Check, ChevronDown, Lock, MoreVertical, ShieldCheck, Pen, ArrowLeft, ChevronUp, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { UserMinus, Trash2, Eye, BadgeInfo, LogOut, Copy, Check, ChevronDown, Lock, MoreVertical, ShieldCheck, Pen, ArrowLeft, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { RoomParticipant } from '@/types';
 
 // Official IPL team colors (same as My Team page)
@@ -680,7 +680,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   );
 }
 
-// ───────────────────�// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
 // TeamDetailView Component
 // ─────────────────────────────────────────────────────────
 

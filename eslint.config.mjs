@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Custom ignores
+    "sync-worker/**",
+    "seed-fixtures.js",
+    "**/.!*",
+    "lint_report.txt",
+    "fantasy-dashboard/**"
   ]),
 ]);
 
