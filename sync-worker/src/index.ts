@@ -195,7 +195,9 @@ async function syncTourFixtures(env: Env) {
     away_team_short_name: m.AwayTeamShortName,
     match_name: m.MatchName,
     matchday_name: m.MatchdayName,
-    venue: m.Venue
+    venue: m.Venue,
+    is_live: m.IsLive === true || m.IsLive === 1 || String(m.IsLive).toLowerCase() === 'true',
+    match_status: m.MatchStatus || m.matchstatus || null
   }));
 
   const chunkSize = 50;
@@ -233,10 +235,12 @@ export default {
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     try {
       if (event.cron === '0 0 * * *') {
-        // Daily run for Tour Fixtures at midnight UTC
+        // Daily run at midnight UTC for a full fixture list refresh
         await syncTourFixtures(env);
+        await syncGamedayPlayers(env, false);
       } else {
-        // Default 5-minute run for Players
+        // Every 5-minute run: sync BOTH players AND fixture statuses (for real-time is_live / match_status)
+        await syncTourFixtures(env);
         await syncGamedayPlayers(env, false);
       }
     } catch (e) {

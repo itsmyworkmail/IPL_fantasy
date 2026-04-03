@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ELITE LEAGUE - Fantasy Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#93000a",
+              "tertiary-fixed-dim": "#ffb95f",
+              "on-primary-container": "#0d0096",
+              "secondary-fixed-dim": "#b7c8e1",
+              "on-surface-variant": "#c7c4d7",
+              "primary": "#c0c1ff",
+              "on-tertiary-fixed-variant": "#653e00",
+              "on-surface": "#dae2fd",
+              "surface-container-highest": "#2d3449",
+              "surface-bright": "#31394d",
+              "surface": "#0b1326",
+              "on-secondary-container": "#a9bad3",
+              "inverse-on-surface": "#283044",
+              "on-error": "#690005",
+              "inverse-primary": "#494bd6",
+              "error": "#ffb4ab",
+              "surface-container": "#171f33",
+              "surface-tint": "#c0c1ff",
+              "on-primary-fixed-variant": "#2f2ebe",
+              "outline": "#908fa0",
+              "on-error-container": "#ffdad6",
+              "inverse-surface": "#dae2fd",
+              "primary-container": "#8083ff",
+              "outline-variant": "#464554",
+              "on-primary-fixed": "#07006c",
+              "tertiary-fixed": "#ffddb8",
+              "on-secondary-fixed": "#0b1c30",
+              "surface-variant": "#2d3449",
+              "on-tertiary-fixed": "#2a1700",
+              "secondary-fixed": "#d3e4fe",
+              "on-primary": "#1000a9",
+              "surface-container-lowest": "#060e20",
+              "on-tertiary": "#472a00",
+              "background": "#0b1326",
+              "tertiary-container": "#ca8100",
+              "on-secondary": "#213145",
+              "tertiary": "#ffb95f",
+              "on-tertiary-container": "#3e2400",
+              "secondary-container": "#3a4a5f",
+              "primary-fixed": "#e1e0ff",
+              "surface-dim": "#0b1326",
+              "secondary": "#b7c8e1",
+              "on-background": "#dae2fd",
+              "surface-container-low": "#131b2e",
+              "on-secondary-fixed-variant": "#38485d",
+              "surface-container-high": "#222a3d",
+              "primary-fixed-dim": "#c0c1ff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .font-manrope { font-family: 'Manrope', sans-serif; }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(23, 31, 51, 0.5);
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(144, 143, 160, 0.2);
+        border-radius: 2px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(144, 143, 160, 0.4);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- SideNavBar -->
+<nav class="h-screen w-64 fixed left-0 top-0 bg-[#131b2e] dark:bg-[#131b2e] flex flex-col py-8 px-4 gap-y-6 z-50 overflow-y-auto">
+<div class="px-4 mb-4">
+<h1 class="text-indigo-400 font-black font-manrope text-2xl tracking-tighter" style="">CRICTRACK</h1>
+<p class="font-manrope uppercase tracking-widest text-[10px] font-bold text-slate-500 mt-1" style="">IPL FANTASY POINTS TRACKER</p>
+</div>
+<div class="flex flex-col gap-y-2">
+<a class="flex items-center gap-x-3 px-4 py-3 text-[#c0c1ff] bg-[#222a3d] rounded-lg border-l-4 border-[#6366F1] scale-105 duration-200 ease-out group" href="#" style="">
+<span class="material-symbols-outlined" data-icon="sports_football" style="">sports_football</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-bold" style="">Lobby</span>
+</a>
+<a class="flex items-center gap-x-3 px-4 py-3 text-slate-500 hover:text-slate-200 hover:bg-[#222a3d] group transition-all duration-200" href="#" style="">
+<span class="material-symbols-outlined" data-icon="military_tech" style="">military_tech</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-bold" style="">Contests</span>
+</a>
+<a class="flex items-center gap-x-3 px-4 py-3 text-slate-500 hover:text-slate-200 hover:bg-[#222a3d] group transition-all duration-200" href="#" style="">
+<span class="material-symbols-outlined" data-icon="groups" style="">groups</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-bold" style="">My Teams</span>
+</a>
+</div>
+</nav>
+<div class="pl-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="w-full h-16 sticky top-0 z-40 bg-[#0b1326] dark:bg-[#0b1326] flex justify-between items-center px-8 backdrop-blur-xl bg-opacity-60 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-6">
+<span class="font-manrope font-black tracking-tighter text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#c0c1ff] to-[#8083ff]" style="">CRICTRACK</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 border-r border-outline-variant/20 pr-6">
+<span class="material-symbols-outlined text-slate-400 cursor-pointer hover:text-primary transition-colors" data-icon="notifications" style="">notifications</span>
+<span class="material-symbols-outlined text-slate-400 cursor-pointer hover:text-primary transition-colors" data-icon="settings" style="">settings</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-[10px] font-bold tracking-widest uppercase text-primary" style="">Pro Member</span>
+<span class="text-xs font-medium text-on-surface" style="">Alex Thompson</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center border-2 border-surface-container-high overflow-hidden">
+<img alt="User profile avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRk5V9ji-lXPaWZl6ILjkvEMWtewUAZKoaD6E5N5k5m9dZamT4aoAXs3ldUUjxhEaBDxG3utIoxlaXFAqZW22jWEABx9u8Eb9U_aINaup9Aj5i6J67eh8gvDXJDwTgl1_DFblRTEzG2oOT4cS5G5WtDmI7SXUfDfLfCvpxH10AWudPXtRmw4GpGYK7wnTrgcRPwdWGIs_KsFb22rSYN3bZC5vJML-rdJNeOYMsFd8oDYej0PH0niKGK4mkpWDKi13cTRPTAMDqUI4" style=""/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="p-8 space-y-8 max-w-7xl mx-auto w-full">
+<!-- Live Impact Section -->
+<section>
+<div class="flex items-end justify-between mb-6">
+<div>
+<span class="bg-tertiary-container/20 text-tertiary-fixed-dim px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border border-tertiary-fixed-dim/20 mb-2 inline-block" style="">Live</span>
+<h2 class="font-manrope font-black tracking-tight text-on-surface text-xl" style="">APR 03 - MI vs RCB - Wankhade Stadium, Mumbai </h2>
+</div>
+<button class="bg-surface-container-high text-primary font-manrope font-bold py-3 px-6 rounded-xl text-[10px] tracking-widest uppercase cursor-pointer hover:bg-surface-container-highest transition-all duration-200" style="">
+                        create your team</button>
+</div>
+<div class="bg-surface-container-low rounded-xl p-8 relative overflow-hidden"><div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at 70% 20%, #6366F1 0%, transparent 50%);"></div>
+<div class="relative flex flex-col lg:flex-row items-center justify-between gap-12">
+<div class="flex flex-col">
+<span class="text-[10px] font-black text-slate-500 tracking-widest uppercase mb-1" style="">Mumbai Indians</span>
+<div class="flex items-baseline gap-4">
+<span class="text-6xl font-manrope font-black tracking-tighter text-on-surface" style="">MI 174/4</span>
+<span class="text-xl font-manrope font-medium text-slate-400" style="">18.2 Overs</span>
+</div>
+</div>
+<div class="flex flex-grow justify-end gap-16">
+<div class="flex flex-col">
+<span class="text-[10px] font-black tracking-widest uppercase text-primary mb-2" style="">Active Striker</span>
+<div class="flex items-baseline gap-3">
+<h3 class="text-2xl font-manrope font-bold text-on-surface" style="">S. Yadav</h3>
+<span class="text-2xl font-manrope font-black text-on-surface" style="">62 <span class="text-[11px] font-bold text-slate-500 uppercase" style="">Runs</span></span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-black tracking-widest uppercase text-secondary mb-2" style="">Active Bowler</span>
+<div class="flex items-baseline gap-3">
+<h3 class="text-2xl font-manrope font-bold text-on-surface" style="">R. Jadeja</h3>
+<span class="text-2xl font-manrope font-black text-on-surface" style="">1/28 <span class="text-[11px] font-bold text-slate-500 uppercase" style="">Wkts</span></span>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<div class="grid grid-cols-12 gap-8">
+<div class="col-span-12 lg:col-span-9 space-y-8">
+<section>
+<h3 class="text-xs font-bold tracking-widest uppercase text-slate-400 mb-6 flex items-center gap-3" style="">
+                            Top Performers - recent match<div class="h-[1px] w-12 bg-outline-variant/30"></div>
+</h3>
+<div class="grid grid-cols-5 gap-4">
+<div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-all cursor-pointer group">
+<div class="text-[8px] font-black tracking-widest uppercase text-slate-500 mb-2" style="">CSK • BAT</div>
+<h4 class="text-sm font-manrope font-bold text-on-surface group-hover:text-primary transition-colors" style="">R. Gaikwad</h4>
+<div class="mt-4 flex flex-col">
+<span class="text-xl font-manrope font-black text-on-surface" style="">112</span>
+<span class="text-[9px] font-bold tracking-widest uppercase text-slate-500" style="">Points</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-all cursor-pointer group">
+<div class="text-[8px] font-black tracking-widest uppercase text-slate-500 mb-2" style="">MI • ALL</div>
+<h4 class="text-sm font-manrope font-bold text-on-surface group-hover:text-primary transition-colors" style="">H. Pandya</h4>
+<div class="mt-4 flex flex-col">
+<span class="text-xl font-manrope font-black text-on-surface" style="">94</span>
+<span class="text-[9px] font-bold tracking-widest uppercase text-slate-500" style="">Points</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-all cursor-pointer group">
+<div class="text-[8px] font-black tracking-widest uppercase text-slate-500 mb-2" style="">RCB • BAT</div>
+<h4 class="text-sm font-manrope font-bold text-on-surface group-hover:text-primary transition-colors" style="">V. Kohli</h4>
+<div class="mt-4 flex flex-col">
+<span class="text-xl font-manrope font-black text-on-surface" style="">88</span>
+<span class="text-[9px] font-bold tracking-widest uppercase text-slate-500" style="">Points</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-all cursor-pointer group">
+<div class="text-[8px] font-black tracking-widest uppercase text-slate-500 mb-2" style="">KKR • BOWL</div>
+<h4 class="text-sm font-manrope font-bold text-on-surface group-hover:text-primary transition-colors" style="">M. Starc</h4>
+<div class="mt-4 flex flex-col">
+<span class="text-xl font-manrope font-black text-on-surface" style="">76</span>
+<span class="text-[9px] font-bold tracking-widest uppercase text-slate-500" style="">Points</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-all cursor-pointer group">
+<div class="text-[8px] font-black tracking-widest uppercase text-slate-500 mb-2" style="">GT • ALL</div>
+<h4 class="text-sm font-manrope font-bold text-on-surface group-hover:text-primary transition-colors" style="">R. Khan</h4>
+<div class="mt-4 flex flex-col">
+<span class="text-xl font-manrope font-black text-on-surface" style="">69</span>
+<span class="text-[9px] font-bold tracking-widest uppercase text-slate-500" style="">Points</span>
+</div>
+</div>
+</div>
+</section>
+<section>
+<div class="bg-surface-container-low rounded-xl overflow-hidden flex flex-col" style="height: 640px;">
+<div class="px-6 py-6 border-b border-outline-variant/10 flex flex-col gap-4 flex-shrink-0"><div class="flex items-center justify-between gap-4">
+<h3 class="text-xs font-bold tracking-widest uppercase text-slate-400 flex-shrink-0" style="">Impact Tracking</h3>
+<div class="flex items-center gap-4">
+<!-- Filters: Compact version -->
+<div class="flex bg-surface-container-highest p-0.5 rounded-lg border border-outline-variant/10" id="impact-tracking-filters">
+<button class="px-3 py-1 rounded-md bg-primary text-on-primary-fixed text-[9px] font-bold tracking-widest uppercase" style="">All</button>
+<button class="px-3 py-1 rounded-md text-slate-400 hover:text-on-surface text-[9px] font-bold tracking-widest uppercase transition-colors" style="">Bat</button>
+<button class="px-3 py-1 rounded-md text-slate-400 hover:text-on-surface text-[9px] font-bold tracking-widest uppercase transition-colors" style="">Bow</button>
+<button class="px-3 py-1 rounded-md text-slate-400 hover:text-on-surface text-[9px] font-bold tracking-widest uppercase transition-colors" style="">AR</button>
+<button class="px-3 py-1 rounded-md text-slate-400 hover:text-on-surface text-[9px] font-bold tracking-widest uppercase transition-colors" style="">WK</button>
+</div>
+<!-- Search Bar: Compact version -->
+<div class="relative w-40">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs" style="">search</span>
+<input class="w-full bg-surface-container-highest border-none rounded-lg py-1 pl-7 pr-3 text-[9px] font-manrope text-on-surface focus:ring-1 focus:ring-primary/40 transition-all" placeholder="Search players..." type="text"/>
+</div>
+</div>
+</div></div>
+<div class="overflow-y-auto custom-scrollbar flex-grow">
+<table class="w-full">
+<thead class="sticky top-0 bg-surface-container-low z-10 shadow-sm">
+<tr class="text-left border-b border-outline-variant/5">
+<th class="px-6 py-4 text-[9px] font-black tracking-widest uppercase text-slate-500" style="">Rank</th>
+<th class="px-6 py-4 text-[9px] font-black tracking-widest uppercase text-slate-500" style="">Player</th>
+<th class="px-6 py-4 text-[9px] font-black tracking-widest uppercase text-slate-500" style="">Team</th>
+<th class="px-6 py-4 text-[9px] font-black tracking-widest uppercase text-slate-500 text-right" style="">Total Points</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#01</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Suryakumar Yadav</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Mumbai Indians</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">1,452</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#02</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Ravindra Jadeja</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Chennai Super Kings</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">1,318</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#03</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Jasprit Bumrah</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Mumbai Indians</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">1,284</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#04</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Shubman Gill</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Gujarat Titans</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">1,195</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#05</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Glenn Maxwell</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Royal Challengers</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">1,072</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#06</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Ruturaj Gaikwad</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Chennai Super Kings</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">984</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#07</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Rashid Khan</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Gujarat Titans</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">942</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#08</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Virat Kohli</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Royal Challengers</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">912</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#09</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Mohammed Shami</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Gujarat Titans</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">885</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-primary" style="">#10</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Hardik Pandya</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Mumbai Indians</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">856</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-slate-400" style="">#11</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Yuzvendra Chahal</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Rajasthan Royals</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">812</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-6 py-5 text-sm font-manrope font-bold text-slate-400" style="">#12</td>
+<td class="px-6 py-5 text-sm font-manrope font-bold text-on-surface" style="">Mitchell Starc</td>
+<td class="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest" style="">Kolkata Knight Riders</td>
+<td class="px-6 py-5 text-right font-manrope font-black text-on-surface" style="">786</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+<aside class="col-span-12 lg:col-span-3 space-y-6">
+<h3 class="text-xs font-bold tracking-widest uppercase text-slate-400 flex items-center gap-3" style="">
+                        My Team
+                        <div class="h-[1px] flex-grow bg-outline-variant/30"></div>
+</h3>
+<div class="bg-surface-container-low rounded-xl border border-outline-variant/10 overflow-hidden">
+<div class="p-4 border-b border-outline-variant/10 bg-surface-container-high/30">
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-black tracking-widest uppercase text-primary" style="">Active XI</span>
+<span class="text-sm font-black text-primary uppercase" style="">2,485</span>
+</div>
+</div>
+<div class="divide-y divide-outline-variant/5">
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">S. Yadav</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">MI • BAT</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">452</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">R. Jadeja</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">CSK • ALL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">318</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">J. Bumrah</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">MI • BOWL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">284</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">V. Kohli</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">RCB • BAT</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">245</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">R. Gaikwad</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">CSK • BAT</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">212</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">M. Starc</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">KKR • BOWL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">198</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">R. Khan</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">GT • ALL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">185</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">H. Pandya</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">MI • ALL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">176</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">Q. de Kock</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">LSG • WK</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">164</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">Y. Chahal</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">RR • BOWL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">148</span>
+</div>
+<div class="p-4 hover:bg-surface-container-highest transition-colors cursor-pointer flex justify-between items-center">
+<div>
+<h4 class="text-xs font-manrope font-bold text-on-surface" style="">A. Russell</h4>
+<p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest" style="">KKR • ALL</p>
+</div>
+<span class="text-sm font-manrope font-black text-on-surface" style="">103</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</div>
+</body></html>

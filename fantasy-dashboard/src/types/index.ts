@@ -13,6 +13,7 @@ export interface Room {
   invite_code: string | null;
   creator_id: string | null;
   settings: Record<string, unknown>;
+  participant_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export interface Team {
   profile_id: string;
   name: string;
   selected_players: number[];
+  show_in_lobby?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +60,8 @@ export interface TourFixture {
   venue: string;
   status?: string;
   match_number?: number;
+  is_live?: boolean;
+  match_status?: string | null;
 }
 
 // Keeping the legacy interface names so components don't completely break before refactoring,
@@ -72,6 +76,7 @@ export interface RoomParticipant {
   ipl_team: string;
   created_at: string;
   updated_at?: string;
+  locked_squad?: number[] | null;
   
   // Realtime Joined fields
   name?: string;

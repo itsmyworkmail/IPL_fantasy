@@ -16,7 +16,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-[var(--sidebar-width)] h-screen sticky top-0 bg-surface-container-low border-r border-ghost-border flex flex-col pt-8 pb-6 px-4 z-20">
+    <aside className="w-64 h-screen sticky top-0 bg-surface-container-low border-r border-ghost-border flex flex-col pt-8 pb-6 px-4 z-20">
       {/* Brand */}
       <div className="flex items-center gap-3 mb-10 px-2">
         <div className="w-10 h-10 bg-primary/20 text-primary rounded-xl flex items-center justify-center font-bold text-xl ring-1 ring-primary/30">
@@ -35,7 +35,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.path}
-              className={`flex items-center gap-4 px-3 py-3 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-4 px-3 py-3 rounded-lg text-base font-semibold transition-colors ${
                 isActive 
                   ? 'bg-primary-container text-on-primary-container shadow-subtle' 
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
@@ -86,7 +86,7 @@ export function Sidebar() {
               className="text-on-surface-variant hover:text-error transition-colors p-2 rounded-lg hover:bg-surface-container-high ml-2"
               title="Sign Out"
             >
-              <span className="material-symbols-outlined text-[1.2rem]">logout</span>
+              <span className="material-symbols-outlined text-[1.2rem]">Logout</span>
             </button>
           </div>
         ) : (

@@ -165,9 +165,57 @@ export function useTeam(profileId?: string) {
     }
   };
 
+  const deleteTeam = async (id: string) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+       const { error } = await supabase
+         .from('teams')
+         .delete()
+         .eq('id', id);
+         
+       if (error) throw error;
+       setTeams(prev => prev.filter(t => t.id !== id));
+       if (activeTeamId === id) {
+          setActiveTeamId(null);
+       }
+    } catch(err: unknown) {
+       setError(err instanceof Error ? err.message : String(err));
+       throw err;
+    } finally {
+       setLoading(false);
+    }
+  };
+
+  const setLobbyTeamStatus = async (id: string, status: boolean) => {
+    if (!user) return;
+    try {
+       if (status) {
+          await supabase.from('teams').update({ show_in_lobby: false }).eq('profile_id', user.id);
+       }
+       const { data, error } = await supabase
+         .from('teams')
+         .update({ show_in_lobby: status })
+         .eq('id', id)
+         .select()
+         .single();
+         
+       if (error) throw error;
+       
+       setTeams(prev => prev.map(t => {
+           if (t.id === id) return { ...t, show_in_lobby: status } as Team;
+           if (status) return { ...t, show_in_lobby: false } as Team;
+           return t;
+       }));
+    } catch(err: unknown) {
+       setError(err instanceof Error ? err.message : String(err));
+       throw err;
+    }
+  };
+
   const saveTeam = async () => {
     return activeTeam;
   };
 
-  return { team: activeTeam, teams, activeTeamId, setActiveTeamId, mySquad, loading, error, fetchTeam: fetchTeams, fetchTeams, saveTeam, togglePlayer, createTeam, renameTeam };
+  return { team: activeTeam, teams, activeTeamId, setActiveTeamId, mySquad, loading, error, fetchTeam: fetchTeams, fetchTeams, saveTeam, togglePlayer, createTeam, renameTeam, deleteTeam, setLobbyTeamStatus };
 }

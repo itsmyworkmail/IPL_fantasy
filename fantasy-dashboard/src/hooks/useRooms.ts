@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Room } from '@/types';
+import { Room, RoomParticipant } from '@/types';
 import { useAuth } from '@/components/AuthProvider';
 
 export function useRooms() {
@@ -40,10 +40,22 @@ export function useRooms() {
           .in('id', allRoomIds);
           
         if (roomsError) throw roomsError;
+
+        // Fetch participant counts for each room
+        const { data: countData } = await supabase
+          .from('room_participants')
+          .select('room_id')
+          .in('room_id', allRoomIds);
+        
+        const countMap: Record<string, number> = {};
+        (countData || []).forEach((row: { room_id: string }) => {
+          countMap[row.room_id] = (countMap[row.room_id] || 0) + 1;
+        });
         
         // Ensure settings fallback
         const filledRooms = (roomsData as Room[]).map(r => ({
            ...r,
+           participant_count: countMap[r.id] || 0,
            settings: r.settings || { lock_room: false, modify_teams: true, allow_duplicates: true }
         }));
         
@@ -260,9 +272,51 @@ export function useRooms() {
     }
   };
 
+  const deleteRoom = async (roomId: string) => {
+    if (!user) throw new Error("Must be logged in");
+    setLoading(true);
+    try {
+       const { error } = await supabase
+          .from('rooms')
+          .delete()
+          .eq('id', roomId)
+          .eq('creator_id', user.id);
+       if (error) throw error;
+       setRooms(prev => prev.filter(r => r.id !== roomId));
+    } catch (err: unknown) {
+       setError(err instanceof Error ? err.message : String(err));
+       throw err;
+    } finally {
+       setLoading(false);
+    }
+  };
+
+  const lockRoomSquads = async (roomId: string, participants: RoomParticipant[]) => {
+    if (!user) throw new Error("Must be logged in");
+    try {
+        // Prepare bulk update array for all participants in the room
+        const updates = participants.map(p => ({
+            id: p.id,
+            room_id: p.room_id,
+            profile_id: p.profile_id,
+            locked_squad: p.selected_players || [],
+            updated_at: new Date().toISOString()
+        }));
+
+        const { error } = await supabase
+            .from('room_participants')
+            .upsert(updates, { onConflict: 'id' });
+        
+        if (error) throw error;
+    } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+        throw err;
+    }
+  };
+
   return { 
     rooms, activeRoom, loading, error, patchActiveRoom,
     fetchMyRooms, fetchRoom, createRoom, joinRoom, 
-    leaveRoom, updateRoom, updateRoomTeam, removeParticipant 
+    leaveRoom, deleteRoom, updateRoom, updateRoomTeam, removeParticipant, lockRoomSquads 
   };
 }
