@@ -716,12 +716,12 @@ function TeamDetailView({ participant, allParticipants, players, onBack, onSwitc
   const initials = (participant.profiles?.display_name || 'Manager').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
   return (
-    <div className="bg-surface-container-low rounded-2xl overflow-hidden border border-white/5">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden px-8 py-7 border-b border-white/5"
+    <div className="bg-surface-container-low rounded-2xl border border-white/5">
+      {/* Hero Header — overflow-visible so the Switch Team dropdown is never clipped */}
+      <div className="relative px-8 py-7 border-b border-white/5 rounded-t-2xl overflow-visible"
         style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.06) 50%, transparent 100%)' }}>
         {/* Ambient glow */}
-        <div className="absolute top-0 right-0 w-64 h-full bg-indigo-500/5 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-full bg-indigo-500/5 blur-3xl pointer-events-none rounded-t-2xl" />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
 
         <div className="relative flex items-start justify-between flex-wrap gap-6">
@@ -761,7 +761,7 @@ function TeamDetailView({ participant, allParticipants, players, onBack, onSwitc
               <p className="text-[10px] font-bold text-slate-600 mt-0.5">PTS</p>
             </div>
 
-            {/* View other teams dropdown */}
+            {/* Switch Team dropdown — z-[9999] ensures it renders above everything */}
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setDropdownOpen(o => !o)}
@@ -770,7 +770,7 @@ function TeamDetailView({ participant, allParticipants, players, onBack, onSwitc
                 Switch Team <ChevronDownIcon size={13} strokeWidth={2.5} />
               </button>
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-60 bg-[#131d30] border border-indigo-500/20 rounded-xl shadow-2xl shadow-black/60 z-50 py-1 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-60 bg-[#131d30] border border-indigo-500/20 rounded-xl shadow-2xl shadow-black/60 z-[9999] py-1 overflow-y-auto max-h-64">
                   {allParticipants.map(p => (
                     <button
                       key={p.id}
