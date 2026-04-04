@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useRooms } from '@/hooks/useRooms';
@@ -17,27 +17,31 @@ export default function ContestsLobby() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState('');
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      signInWithGoogle();
-    }
-  }, [user, authLoading, signInWithGoogle]);
+  const isMountedRef = useRef(false);
 
   useEffect(() => {
     if (user?.id) {
-      fetchMyRooms();
+      // Only do a foreground fetch on first mount for this user
+      fetchMyRooms(isMountedRef.current); // background=true if already mounted
+      isMountedRef.current = true;
     }
   }, [user?.id, fetchMyRooms]);
 
-  if (authLoading || roomsLoading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  // Register a separate focus listener for silent background refresh
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user?.id) fetchMyRooms(true);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user?.id, fetchMyRooms]);
 
-  if (!user) return null;
+  // Only redirect once auth is confirmed and there's no user
+  if (!authLoading && !user) return null;
+
+  // Skeleton flag: show pulsing cards while rooms are loading for the first time
+  const isRoomsLoading = authLoading || (roomsLoading && rooms.length === 0);
+
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +72,7 @@ export default function ContestsLobby() {
   };
 
   const filteredRooms = rooms.filter(room => {
+    if (!user) return true;
     if (filterType === 'Created') return room.creator_id === user.id;
     if (filterType === 'Joined') return room.creator_id !== user.id;
     return true;
@@ -190,14 +195,29 @@ export default function ContestsLobby() {
 
         {/* Contest Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRooms.length === 0 ? (
+          {isRoomsLoading ? (
+            // Shimmering Skeletons
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-2xl bg-surface-container-low border border-white/5 p-5 space-y-4 animate-pulse">
+                <div className="flex justify-between items-start">
+                  <div className="h-5 w-16 bg-white/5 rounded-md" />
+                  <div className="h-7 w-7 bg-white/5 rounded-lg" />
+                </div>
+                <div className="h-6 w-3/4 bg-white/5 rounded mt-2" />
+                <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                  <div className="h-4 w-24 bg-white/5 rounded" />
+                  <div className="h-4 w-12 bg-white/5 rounded" />
+                </div>
+              </div>
+            ))
+          ) : filteredRooms.length === 0 ? (
             <div className="lg:col-span-3 py-20 text-center bg-surface-container-low rounded-2xl border border-white/5">
               <Trophy className="w-10 h-10 text-slate-700 mx-auto mb-3" />
               <p className="text-slate-500 font-bold text-sm">No contests found</p>
               <p className="text-slate-600 text-xs mt-1">Create or join one above to get started!</p>
             </div>
           ) : filteredRooms.map((room) => {
-            const isHost = room.creator_id === user.id;
+            const isHost = user && room.creator_id === user.id;
             return (
               <div
                 key={room.id}

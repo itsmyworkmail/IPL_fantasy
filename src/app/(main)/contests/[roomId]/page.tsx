@@ -204,18 +204,19 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
 
 
 
-  if (authLoading || (roomLoading && !activeRoom)) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  // Only redirect once auth has fully resolved and there's no user
+  if (!authLoading && !user) {
+    signInWithGoogle();
+    return null;
   }
 
-  if (!activeRoom) return null;
+  // isLoading = true on cold first-load only (no room data yet)
+  const isShellLoading = authLoading || (roomLoading && !activeRoom);
 
-  const isHost = activeRoom.creator_id === user?.id;
-  const settings = activeRoom.settings || { lock_room: false, modify_teams: true, allow_duplicates: true };
+  if (!isShellLoading && !activeRoom) return null;
+
+  const isHost = activeRoom?.creator_id === user?.id;
+  const settings = activeRoom?.settings || { lock_room: false, modify_teams: true, allow_duplicates: true };
   const isLockRoom = settings.lock_room === true;
   const isModifyTeamsRaw = settings.modify_teams !== false;
   const isModifyTeams = isLockRoom ? false : isModifyTeamsRaw;
@@ -278,7 +279,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   };
 
   const handleTitleSubmit = async () => {
-    if (editTitleBuffer.trim() !== activeRoom.name) {
+    if (activeRoom && editTitleBuffer.trim() !== activeRoom.name) {
       activeRoom.name = editTitleBuffer.trim(); // optimistic
       await updateRoom(roomId, { name: editTitleBuffer.trim() });
     }
@@ -286,7 +287,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   };
 
   const handleDescSubmit = async () => {
-    if (editDescBuffer.trim() !== activeRoom.description) {
+    if (activeRoom && editDescBuffer.trim() !== activeRoom.description) {
       activeRoom.description = editDescBuffer.trim(); // optimistic
       await updateRoom(roomId, { description: editDescBuffer.trim() });
     }
@@ -349,9 +350,11 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
             <nav className="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase items-center">
               <span>Contests</span>
               <span>/</span>
-              <span className="text-indigo-400">{activeRoom.name}</span>
+              <span className="text-indigo-400">{isShellLoading ? '...' : activeRoom?.name}</span>
             </nav>
-            {!isHost ? (
+            {isShellLoading ? (
+              <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
+            ) : !isHost ? (
               <button onClick={handleLeave} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
                 <LogOut size={14} strokeWidth={2.5} /> Leave Contest
               </button>
@@ -365,7 +368,9 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
           <div className="flex justify-between items-start gap-12">
             <div className="flex-grow group">
               <div className="flex items-center gap-3">
-                {isEditingTitle && isHost ? (
+                {isShellLoading ? (
+                  <div className="h-12 w-64 bg-white/5 rounded-xl animate-pulse mt-1" />
+                ) : isEditingTitle && isHost ? (
                   <input
                     autoFocus
                     className="bg-surface-container-low text-5xl font-black font-headline text-on-surface leading-tight w-full outline-none border-b-2 border-primary border-dashed"
@@ -380,7 +385,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                     className={`text-5xl font-black font-headline text-on-surface leading-tight ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
                     title={isHost ? "Double click to rename" : ""}
                   >
-                    {activeRoom.name}
+                    {activeRoom?.name}
                   </h2>
                 )}
                 {isHost && (
@@ -410,7 +415,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                     className={`text-on-surface-variant mt-2 max-w-lg ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
                     title={isHost ? "Double click to rename" : ""}
                   >
-                    {activeRoom.description || 'A single line description about anything'}
+                    {activeRoom?.description || 'A single line description about anything'}
                   </p>
                 )}
                 {isHost && (
@@ -426,15 +431,19 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
             </div>
 
             <div className="shrink-0 pt-2">
-              <div className="bg-surface-container-high/50 border border-white/5 px-3 py-1 rounded-lg flex items-center gap-5 backdrop-blur-sm group hover:border-indigo-500/30 transition-all">
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1">Invite Code</span>
-                  <span className="font-mono text-sm font-bold text-on-surface text-left">{activeRoom.invite_code}</span>
+              {isShellLoading ? (
+                <div className="h-12 w-32 bg-white/5 rounded-lg animate-pulse" />
+              ) : (
+                <div className="bg-surface-container-high/50 border border-white/5 px-3 py-1 rounded-lg flex items-center gap-5 backdrop-blur-sm group hover:border-indigo-500/30 transition-all">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1">Invite Code</span>
+                    <span className="font-mono text-sm font-bold text-on-surface text-left">{activeRoom?.invite_code}</span>
+                  </div>
+                  <button onClick={() => navigator.clipboard.writeText(activeRoom?.invite_code || '')} className="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors" title="Copy Code">
+                    <Copy size={16} strokeWidth={2.5} />
+                  </button>
                 </div>
-                <button onClick={() => navigator.clipboard.writeText(activeRoom.invite_code || '')} className="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors" title="Copy Code">
-                  <Copy size={16} strokeWidth={2.5} />
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -473,7 +482,22 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                   </thead>
                   <tbody className="divide-y divide-white/5 relative">
                     {loadingMembers ? (
-                      <tr><td colSpan={4} className="p-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div></td></tr>
+                      [...Array(5)].map((_, i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="px-8 py-6"><div className="h-4 w-4 bg-white/5 rounded" /></td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-lg bg-white/5" />
+                              <div className="space-y-2">
+                                <div className="h-4 w-32 bg-white/5 rounded" />
+                                <div className="h-3 w-24 bg-white/5 rounded" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6"><div className="h-4 w-12 bg-white/5 rounded" /></td>
+                          <td className="px-8 py-6"><div className="h-4 w-8 bg-white/5 rounded ml-auto" /></td>
+                        </tr>
+                      ))
                     ) : participantsWithScores.length === 0 ? (
                       <tr><td colSpan={4} className="p-8 text-center text-slate-500">No teams have joined yet.</td></tr>
                     ) : (
@@ -512,7 +536,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                                 <div>
                                   <p className="font-bold text-on-surface flex items-center gap-2">
                                     {p.profiles?.display_name || 'Manager'}
-                                    {p.profile_id === activeRoom.creator_id && <span className="text-[9px] px-1.5 py-0.5 rounded bg-tertiary/20 text-tertiary font-bold uppercase tracking-widest">Host</span>}
+                                    {activeRoom && p.profile_id === activeRoom.creator_id && <span className="text-[9px] px-1.5 py-0.5 rounded bg-tertiary/20 text-tertiary font-bold uppercase tracking-widest">Host</span>}
                                     {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold uppercase tracking-widest">You</span>}
                                   </p>
                                   <p className="text-xs text-on-surface-variant line-clamp-1">{p.ipl_team ? IPL_FRANCHISES.find(f => f.id === p.ipl_team)?.name : 'Unassigned Franchise'}</p>

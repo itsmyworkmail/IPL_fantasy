@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export interface GamedayPointEntry {
@@ -50,6 +50,19 @@ interface UsePlayerMatchHistoryReturn {
   error: string | null;
 }
 
+// Module-level cache keyed by a string of `playerIds:teamNames`
+// This survives page navigations and tab focus events.
+interface HistoryCache {
+  playerHistory: PlayerHistoryMap;
+  teamSchedule: TeamScheduleMap;
+  playedTeamSchedule: TeamScheduleMap;
+  allGamedayIds: number[];
+  maxMatchCount: number;
+  timestamp: number;
+}
+const historyCache = new Map<string, HistoryCache>();
+const CACHE_TTL_MS = 60_000; // 1 minute stale-while-revalidate
+
 /**
  * Fetches match-by-match gameday_points for a given set of player_ids.
  *
@@ -65,29 +78,49 @@ export function usePlayerMatchHistory(
   playerIds: number[],
   teamShortNames: string[]
 ): UsePlayerMatchHistoryReturn {
-  const [playerHistory, setPlayerHistory] = useState<PlayerHistoryMap>({});
-  const [teamSchedule, setTeamSchedule] = useState<TeamScheduleMap>({});
-  const [playedTeamSchedule, setPlayedTeamSchedule] = useState<TeamScheduleMap>({});
-  const [allGamedayIds, setAllGamedayIds] = useState<number[]>([]);
-  const [maxMatchCount, setMaxMatchCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  // Stable string keys to avoid reference-identity re-renders
+  const playerIdsKey = [...playerIds].sort((a, b) => a - b).join(',');
+  const teamNamesKey = [...teamShortNames].sort().join(',');
+  const cacheKey = `${playerIdsKey}::${teamNamesKey}`;
+
+  const cachedEntry = historyCache.get(cacheKey);
+  const hasCachedData = !!cachedEntry && cachedEntry.playerHistory && Object.keys(cachedEntry.playerHistory).length > 0;
+
+  const [playerHistory, setPlayerHistory] = useState<PlayerHistoryMap>(cachedEntry?.playerHistory ?? {});
+  const [teamSchedule, setTeamSchedule] = useState<TeamScheduleMap>(cachedEntry?.teamSchedule ?? {});
+  const [playedTeamSchedule, setPlayedTeamSchedule] = useState<TeamScheduleMap>(cachedEntry?.playedTeamSchedule ?? {});
+  const [allGamedayIds, setAllGamedayIds] = useState<number[]>(cachedEntry?.allGamedayIds ?? []);
+  const [maxMatchCount, setMaxMatchCount] = useState(cachedEntry?.maxMatchCount ?? 0);
+  // Only show loading on true first load (no cache at all)
+  const [loading, setLoading] = useState(!hasCachedData && playerIds.length > 0);
   const [error, setError] = useState<string | null>(null);
 
-  const playerIdsKey = playerIds.join(',');
-  const teamNamesKey = teamShortNames.join(',');
+  const isFetchingRef = useRef(false);
 
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (isBackground = false) => {
     if (playerIds.length === 0 || teamShortNames.length === 0) {
       setPlayerHistory({});
       setTeamSchedule({});
       setPlayedTeamSchedule({});
       setAllGamedayIds([]);
       setMaxMatchCount(0);
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (isFetchingRef.current) return;
+
+    const cached = historyCache.get(cacheKey);
+    const isFresh = cached && Date.now() - cached.timestamp < CACHE_TTL_MS;
+
+    // If cache is fresh, skip the network request entirely
+    if (isFresh && isBackground) return;
+
+    // Only show loading spinner if we have absolutely no data to display
+    const hasExistingData = cached && Object.keys(cached.playerHistory).length > 0;
+    if (!isBackground && !hasExistingData) setLoading(true);
+
+    isFetchingRef.current = true;
 
     try {
       // 1. Fetch ALL fixtures (ordered by datetime) to build team schedule maps
@@ -157,18 +190,51 @@ export function usePlayerMatchHistory(
       }
       setMaxMatchCount(max);
 
+      // Update module-level cache
+      historyCache.set(cacheKey, {
+        playerHistory: historyMap,
+        teamSchedule: scheduleMap,
+        playedTeamSchedule: playedScheduleMap,
+        allGamedayIds: sortedPlayedIds,
+        maxMatchCount: max,
+        timestamp: Date.now(),
+      });
+
     } catch (err: unknown) {
       console.error('Failed to fetch player match history:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch match history');
     } finally {
-      setLoading(false);
+      isFetchingRef.current = false;
+      if (!isBackground) setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerIdsKey, teamNamesKey]);
+  }, [cacheKey]);
 
   useEffect(() => {
+    const cached = historyCache.get(cacheKey);
+    const isFresh = cached && Date.now() - cached.timestamp < CACHE_TTL_MS;
+
+    if (isFresh) {
+      // Data is fresh — restore from cache without any loading state
+      setPlayerHistory(cached.playerHistory);
+      setTeamSchedule(cached.teamSchedule);
+      setPlayedTeamSchedule(cached.playedTeamSchedule);
+      setAllGamedayIds(cached.allGamedayIds);
+      setMaxMatchCount(cached.maxMatchCount);
+      setLoading(false);
+      return;
+    }
+
     fetchHistory();
-  }, [fetchHistory]);
+  }, [fetchHistory, cacheKey]);
+
+  // Register focus handler for silent background refresh
+  useEffect(() => {
+    if (playerIds.length === 0) return;
+    const handleFocus = () => fetchHistory(true);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchHistory, playerIds.length]);
 
   return { playerHistory, teamSchedule, playedTeamSchedule, allGamedayIds, maxMatchCount, loading, error };
 }

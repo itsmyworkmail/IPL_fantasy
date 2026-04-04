@@ -60,13 +60,14 @@ export default function MyTeamPage() {
     squadTeamNames
   );
 
-  if (authLoading || teamLoading || playersLoading || !user) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  // Redirect to login only when auth has fully resolved and there's no user
+  if (!authLoading && !user) {
+    signInWithGoogle();
+    return null;
   }
+
+  // isLoading = true on cold first-load only (no cached data yet)
+  const isShellLoading = (teamLoading && teams.length === 0) || (playersLoading && players.length === 0);
 
   const totalPoints = mySquad.reduce((sum, p) => sum + p.overall_points, 0);
   const sortedSquad = [...mySquad].sort((a, b) => b.overall_points - a.overall_points);
@@ -111,10 +112,19 @@ export default function MyTeamPage() {
         {/* Left: Season Progress */}
         <div className="col-span-12 md:col-span-7">
           <span className="text-indigo-400 font-bold uppercase tracking-widest text-xs">Season Progress</span>
-          <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-on-surface tracking-tighter mt-2">
-            {totalPoints.toLocaleString()} <span className="text-2xl text-tertiary font-normal tracking-normal">PTS</span>
-          </h1>
-          <p className="text-slate-500 text-sm mt-2">{sortedSquad.length} players drafted</p>
+          {isShellLoading ? (
+            <div className="mt-2 space-y-2">
+              <div className="h-16 w-48 bg-surface-container-high rounded-xl animate-pulse" />
+              <div className="h-4 w-32 bg-surface-container-high rounded animate-pulse" />
+            </div>
+          ) : (
+            <>
+              <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-on-surface tracking-tighter mt-2">
+                {totalPoints.toLocaleString()} <span className="text-2xl text-tertiary font-normal tracking-normal">PTS</span>
+              </h1>
+              <p className="text-slate-500 text-sm mt-2">{sortedSquad.length} players drafted</p>
+            </>
+          )}
         </div>
 
         {/* Right: Franchise Distribution — 5-column horizontal layout */}
@@ -316,7 +326,24 @@ export default function MyTeamPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {sortedSquad.length === 0 ? (
+              {isShellLoading ? (
+                [...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-6 py-4 sticky left-0 bg-[#0f1829]">
+                      <div className="h-4 w-32 bg-surface-container-high rounded animate-pulse" />
+                      <div className="h-3 w-20 bg-surface-container-high rounded animate-pulse mt-2" />
+                    </td>
+                    {[...Array(3)].map((_, j) => (
+                      <td key={j} className="px-3 py-4 text-center">
+                        <div className="h-4 w-8 bg-surface-container-high rounded animate-pulse mx-auto" />
+                      </td>
+                    ))}
+                    <td className="px-6 py-4 text-center">
+                      <div className="h-4 w-10 bg-surface-container-high rounded animate-pulse mx-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : sortedSquad.length === 0 ? (
                 <tr>
                   <td colSpan={matchCols.length + 2} className="px-6 py-16 text-center text-slate-500">
                     {teams.length === 0
