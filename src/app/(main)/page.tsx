@@ -55,11 +55,13 @@ export default function Lobby() {
         <div className="flex items-end justify-between mb-6">
           <div>
             <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border mb-2 inline-block ${
-              isMatchLive
+              displayMatch?.match_status === '1'
                 ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                : displayMatch?.match_status === '2'
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                 : 'bg-tertiary-container/20 text-tertiary-fixed-dim border-tertiary-fixed-dim/20'
             }`}>
-              {isMatchLive ? 'Live' : 'Upcoming'}
+              {displayMatch?.match_status === '1' ? 'Live' : displayMatch?.match_status === '2' ? 'Finished' : 'Upcoming'}
             </span>
             <h2 className="text-3xl font-headline font-black tracking-tight text-on-surface">{matchName}</h2>
           </div>

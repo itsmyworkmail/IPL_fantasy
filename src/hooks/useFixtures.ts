@@ -65,18 +65,13 @@ export function useFixtures(): UseFixturesReturn {
   // ── Derived state ──
   const now = new Date();
 
-  const liveMatch = fixtures.find(f => f.is_live === true) ||
-    fixtures.find(f => {
-      const start = new Date(f.match_datetime).getTime();
-      const end = start + 5 * 60 * 60 * 1000;
-      return now.getTime() >= start && now.getTime() <= end;
-    }) || null;
+  const liveMatch = fixtures.find(f => f.match_status === '1') || null;
 
-  const pastMatches = fixtures.filter(f =>
-    new Date(f.match_datetime) < now && !f.is_live
-  );
+  const pastMatches = fixtures.filter(f => f.match_status === '2');
+  
   const lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
-  const upcomingMatch = fixtures.find(f => new Date(f.match_datetime) > now) || null;
+  
+  const upcomingMatch = fixtures.find(f => f.match_status === '0' || !f.match_status) || null;
 
   const isMatchLive = liveMatch !== null;
   const displayMatch = liveMatch || upcomingMatch || lastMatch;

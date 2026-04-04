@@ -5,6 +5,38 @@ export interface Env {
   SUPABASE_KEY: string;
 }
 
+interface PlayerRecord {
+  Id: number;
+  Name: string;
+  ShortName: string;
+  TeamId: number;
+  TeamName: string;
+  TeamShortName: string;
+  SkillName: string;
+  SkillId: number;
+  OverallPoints: number;
+  GamedayPoints: number;
+}
+
+interface TournamentFixture {
+  MatchId: number;
+  TourGamedayId: number;
+  Matchdate: string;
+  MatchdateTime: string;
+  HomeTeamId: number;
+  HomeTeamName: string;
+  HomeTeamShortName: string;
+  AwayTeamId: number;
+  AwayTeamName: string;
+  AwayTeamShortName: string;
+  MatchName: string;
+  MatchdayName: string;
+  Venue: string;
+  IsLive: number | boolean;
+  MatchStatus: number;
+  matchstatus?: number;
+}
+
 async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
   console.log(`Starting IPL Fantasy Data Sync (Players)... [Manual: ${isManual}]`);
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
@@ -17,7 +49,7 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
   // 1. Check if we have active matches today to throttle cron
   const { data: fixtures, error: fetchErr } = await supabase
     .from('fantasy_tour_fixtures')
-    .select('tour_gameday_id, home_team_id, away_team_id, match_datetime')
+    .select('tour_gameday_id, home_team_id, away_team_id, match_datetime, match_status')
     .in('match_date', [yesterdayStr, todayStr]);
 
   if (fetchErr) throw new Error(`Failed to fetch fixtures: ${fetchErr.message}`);
@@ -30,9 +62,28 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
   if (fixtures) {
     for (const fixture of fixtures) {
       const matchStartTime = new Date(fixture.match_datetime).getTime();
-      if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + SIX_HOURS)) {
+      const status = String(fixture.match_status || '');
+
+      // Rule 1: Always sync if LIVE
+      if (status === '1') {
         isAnyMatchActive = true;
         break;
+      }
+      // Rule 2: Sync 30m before and safely until 30m after start if status is 0 or empty
+      if (status === '0' || status === '') {
+        if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + THIRTY_MINS)) {
+          isAnyMatchActive = true;
+          break;
+        }
+      }
+      // Rule 3: Allow 90m grace period after "Finished" (Status 2) to capture final points
+      if (status === '2') {
+        const NINETY_MINS = 90 * 60 * 1000;
+        const estimatedEndTime = matchStartTime + (4 * 60 * 60 * 1000); // 4h duration estimate
+        if (nowTime <= (estimatedEndTime + NINETY_MINS)) {
+          isAnyMatchActive = true;
+          break;
+        }
       }
     }
   }
@@ -69,10 +120,10 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
   });
 
   if (globalRes.ok) {
-    const globalData: any = await globalRes.json();
+    const globalData = await globalRes.json() as { Data: { Value: { Players: PlayerRecord[] } } };
     const globalPlayers = globalData?.Data?.Value?.Players;
     if (globalPlayers && Array.isArray(globalPlayers) && globalPlayers.length > 0) {
-      const globalRoster = globalPlayers.map((p: any) => ({
+      const globalRoster = globalPlayers.map((p: PlayerRecord) => ({
         player_id: p.Id,
         name: p.Name,
         short_name: p.ShortName,
@@ -105,9 +156,25 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
     const gamedayId = fixture.tour_gameday_id;
     const matchStartTime = new Date(fixture.match_datetime).getTime();
     
-    // Enforce constraints per match unless we triggered it manually
-    if (!isManual && (nowTime < (matchStartTime - THIRTY_MINS) || nowTime > (matchStartTime + SIX_HOURS))) {
-      console.log(`Gameday ${gamedayId} is inactive. Skipping time-series...`);
+    const status = String(fixture.match_status || '');
+    
+    let shouldSyncThisFixture = false;
+    if (status === '1') {
+      shouldSyncThisFixture = true;
+    } else if (status === '0' || status === '') {
+      if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + THIRTY_MINS)) {
+        shouldSyncThisFixture = true;
+      }
+    } else if (status === '2') {
+      const NINETY_MINS = 90 * 60 * 1000;
+      const estimatedEndTime = matchStartTime + (4 * 60 * 60 * 1000);
+      if (nowTime <= (estimatedEndTime + NINETY_MINS)) {
+        shouldSyncThisFixture = true;
+      }
+    }
+
+    if (!isManual && !shouldSyncThisFixture) {
+      console.log(`Gameday ${gamedayId} (Status: ${status}) is inactive. Skipping...`);
       continue;
     }
 
@@ -122,18 +189,24 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
       }
     });
 
-    if (!res.ok) continue;
+    if (!res.ok) {
+      console.error(`Failed to fetch match data for gameday ${gamedayId}: HTTP ${res.status}`);
+      continue;
+    }
     
-    const data: any = await res.json();
+    const data = await res.json() as { Data: { Value: { Players: PlayerRecord[] } } };
     const players = data?.Data?.Value?.Players;
     
-    if (!players || !Array.isArray(players) || players.length === 0) continue;
+    if (!players || !Array.isArray(players) || players.length === 0) {
+      console.log(`No players found in API response for gameday ${gamedayId}`);
+      continue;
+    }
 
-    const validPlayers = players.filter((p: any) => 
+    const validPlayers = players.filter((p: PlayerRecord) => 
       p.TeamId === fixture.home_team_id || p.TeamId === fixture.away_team_id
     );
     
-    const records = validPlayers.map((p: any) => ({
+    const records = validPlayers.map((p: PlayerRecord) => ({
       player_id: p.Id,
       gameday_id: gamedayId,
       name: p.Name,
@@ -175,10 +248,10 @@ async function syncTourFixtures(env: Env) {
 
   if (!res.ok) throw new Error(`Status ${res.status}: Failed to fetch IPL fixtures`);
   
-  const data: any = await res.json();
+  const data = await res.json() as { Data: { Value: TournamentFixture[] } };
   const matches = data?.Data?.Value;
   if (!matches || !Array.isArray(matches)) {
-    throw new Error('Invalid fixtures data format received');
+    throw new Error('Invalid fixtures data format received or empty matches array');
   }
 
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
@@ -196,8 +269,9 @@ async function syncTourFixtures(env: Env) {
     match_name: m.MatchName,
     matchday_name: m.MatchdayName,
     venue: m.Venue,
-    is_live: m.IsLive === true || m.IsLive === 1 || String(m.IsLive).toLowerCase() === 'true',
-    match_status: m.MatchStatus || m.matchstatus || null
+    is_live: m.IsLive === true || m.IsLive === 1 || m.IsLive === 2 || String(m.IsLive).toLowerCase() === 'true',
+    // FIX: Using nullish coalescing to prevent '0' status from becoming null
+    match_status: String(m.MatchStatus ?? m.matchstatus ?? '')
   }));
 
   const chunkSize = 50;
