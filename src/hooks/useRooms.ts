@@ -18,11 +18,7 @@ export function useRooms() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // isFetching prevents multiple simultaneous fetches
   const isFetchingRef = useRef(false);
-
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const roomFetchAbortControllerRef = useRef<AbortController | null>(null);
 
   const fetchMyRooms = useCallback(async (isBackground = false) => {
     if (!user?.id) return;
@@ -33,19 +29,11 @@ export function useRooms() {
     if (!hasCache && !isBackground) setLoading(true);
     isFetchingRef.current = true;
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
     try {
       const { data: participantsData, error: partsError } = await supabase
         .from('room_participants')
         .select('room_id')
-        .eq('profile_id', user.id)
-        .abortSignal(controller.signal);
+        .eq('profile_id', user.id);
 
       if (partsError) throw partsError;
 
@@ -54,8 +42,7 @@ export function useRooms() {
       const { data: createdRoomsData, error: createdRoomsError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('creator_id', user.id)
-        .abortSignal(controller.signal);
+        .eq('creator_id', user.id);
 
       if (createdRoomsError) throw createdRoomsError;
 
@@ -66,16 +53,14 @@ export function useRooms() {
         const { data: roomsData, error: roomsError } = await supabase
           .from('rooms')
           .select('*')
-          .in('id', allRoomIds)
-          .abortSignal(controller.signal);
+          .in('id', allRoomIds);
 
         if (roomsError) throw roomsError;
 
         const { data: countData } = await supabase
           .from('room_participants')
           .select('room_id')
-          .in('room_id', allRoomIds)
-          .abortSignal(controller.signal);
+          .in('room_id', allRoomIds);
 
         const countMap: Record<string, number> = {};
         (countData || []).forEach((row: { room_id: string }) => {
@@ -97,17 +82,10 @@ export function useRooms() {
         setRooms([]);
       }
     } catch (err: unknown) {
-      if ((err as Error).name === 'AbortError') {
-        console.log('Fetch rooms aborted');
-        return;
-      }
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      clearTimeout(timeoutId);
-      if (abortControllerRef.current === controller) {
-        setLoading(false);
-        isFetchingRef.current = false;
-      }
+      setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [user?.id]);
 
@@ -124,20 +102,12 @@ export function useRooms() {
   const fetchRoom = useCallback(async (roomId: string, isBackground = false) => {
     if (!isBackground && !activeRoom) setLoading(true);
 
-    if (roomFetchAbortControllerRef.current) {
-      roomFetchAbortControllerRef.current.abort();
-    }
-    const controller = new AbortController();
-    roomFetchAbortControllerRef.current = controller;
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
     try {
       const { data, error } = await supabase
         .from('rooms')
         .select('*')
         .eq('id', roomId)
-        .single()
-        .abortSignal(controller.signal);
+        .single();
 
       if (error) throw error;
 
@@ -146,17 +116,10 @@ export function useRooms() {
       setActiveRoom(room);
       return room;
     } catch (err: unknown) {
-      if ((err as Error).name === 'AbortError') {
-        console.log('Fetch single room aborted');
-        return null;
-      }
       setError(err instanceof Error ? err.message : String(err));
       return null;
     } finally {
-      clearTimeout(timeoutId);
-      if (roomFetchAbortControllerRef.current === controller) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
