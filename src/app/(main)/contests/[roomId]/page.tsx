@@ -485,6 +485,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
             participant={viewingParticipant}
             allParticipants={participantsWithScores}
             players={players}
+            isModifyTeams={isModifyTeams}
             onBack={() => setViewingParticipant(null)}
             onSwitch={(p) => setViewingParticipant(p)}
           />
@@ -759,19 +760,28 @@ interface TeamDetailViewProps {
   participant: (RoomParticipant & { score?: number }) | null;
   allParticipants: (RoomParticipant & { score?: number })[];
   players: { player_id: number; name: string; team_short_name: string; skill_name: string; overall_points: number }[];
+  /** When false (Modify Teams is off), display the locked_squad snapshot instead of the live global team */
+  isModifyTeams: boolean;
   onBack: () => void;
   onSwitch: (p: RoomParticipant & { score?: number }) => void;
 }
 
-function TeamDetailView({ participant, allParticipants, players, onBack, onSwitch }: TeamDetailViewProps) {
+function TeamDetailView({ participant, allParticipants, players, isModifyTeams, onBack, onSwitch }: TeamDetailViewProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const squadPlayerIds = participant?.selected_players?.map(Number) || [];
+  // When Modify Teams is OFF, show the locked snapshot (what was frozen at lock time).
+  // When ON, show the current live global team.
+  const rawPlayerIds: number[] = !isModifyTeams && (participant?.locked_squad?.length ?? 0) > 0
+    ? (participant?.locked_squad ?? []).map(Number)
+    : (participant?.selected_players ?? []).map(Number);
 
-  const squadPlayers = squadPlayerIds
+  // Resolve to full player objects, then sort descending by overall_points
+  const squadPlayers = rawPlayerIds
     .map(id => players.find(p => p.player_id === id))
-    .filter(Boolean) as typeof players;
+    .filter(Boolean)
+    .sort((a, b) => (b!.overall_points ?? 0) - (a!.overall_points ?? 0)) as typeof players;
 
+  const squadPlayerIds = squadPlayers.map(p => p.player_id);
   const squadTeamNames = [...new Set(squadPlayers.map(p => p.team_short_name))];
 
   const { playerHistory, playedTeamSchedule, maxMatchCount, loading } = usePlayerMatchHistory(

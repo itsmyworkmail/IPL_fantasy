@@ -92,9 +92,13 @@ export function useFixtures(): UseFixturesReturn {
     return () => window.removeEventListener('focus', handleFocus);
   }, [fetchFixtures]);
 
-  // ── Derived state ──
-
-  const liveMatch = fixtures.find(f => f.match_status === '1') || null;
+  // When multiple fixtures share status=1 (e.g. afternoon match just ended but
+  // DB hasn't been updated yet, while evening match just started), treat the one
+  // with the latest match_datetime as the genuinely live/ongoing match.
+  const liveMatches = fixtures.filter(f => f.match_status === '1');
+  const liveMatch = liveMatches.length > 0
+    ? liveMatches[liveMatches.length - 1]   // last in ascending match_datetime order = latest
+    : null;
 
   const pastMatches = fixtures.filter(f => f.match_status === '2');
   
