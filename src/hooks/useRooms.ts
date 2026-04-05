@@ -289,26 +289,83 @@ export function useRooms() {
     }
   };
 
-  const lockRoomSquads = async (roomId: string, participants: RoomParticipant[]) => {
+  const lockRoomSquads = async (roomId: string) => {
     if (!user) throw new Error('Must be logged in');
     try {
-      const updates = participants.map(p => ({
-        id: p.id,
-        room_id: p.room_id,
-        profile_id: p.profile_id,
-        locked_squad: p.selected_players || [],
-        updated_at: new Date().toISOString(),
-      }));
-
-      const { error } = await supabase
+      // ── Step 1: get all participant rows for this room (no join) ───────────
+      // Avoid embedded-resource join syntax which can throw PostgREST ambiguity
+      // errors depending on FK graph complexity.
+      const { data: participantRows, error: partErr } = await supabase
         .from('room_participants')
-        .upsert(updates, { onConflict: 'id' });
-      if (error) throw error;
+        .select('id, profile_id, team_id')
+        .eq('room_id', roomId);
+
+      if (partErr) throw new Error(partErr.message);
+      if (!participantRows || participantRows.length === 0) return;
+
+      // ── Step 2: fetch selected_players for each unique team_id ─────────────
+      const teamIds = [
+        ...new Set(
+          participantRows
+            .map((p: { team_id: string | null }) => p.team_id)
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+
+      const teamPlayersMap: Record<string, number[]> = {};
+      if (teamIds.length > 0) {
+        const { data: teamsData } = await supabase
+          .from('teams')
+          .select('id, selected_players')
+          .in('id', teamIds);
+
+        (teamsData || []).forEach(
+          (t: { id: string; selected_players: number[] | null }) => {
+            teamPlayersMap[t.id] = t.selected_players || [];
+          }
+        );
+      }
+
+      // ── Step 3: upsert locked_squad snapshot for every participant ─────────
+      const updates = participantRows.map(
+        (p: { id: string; profile_id: string; team_id: string | null }) => ({
+          id: p.id,
+          room_id: roomId,
+          profile_id: p.profile_id,
+          // Snapshot the team's current players. Falls back to [] when no team
+          // has been linked yet so the row is always written (never stays null).
+          locked_squad: p.team_id ? (teamPlayersMap[p.team_id] ?? []) : [],
+          updated_at: new Date().toISOString(),
+        })
+      );
+
+      // Use individual UPDATE calls — NOT upsert — so the INSERT RLS policy is
+      // never invoked. The new "room_creator_can_lock_squads" UPDATE policy
+      // allows the room creator to update any participant row in their room.
+      const results = await Promise.all(
+        updates.map(u =>
+          supabase
+            .from('room_participants')
+            .update({ locked_squad: u.locked_squad, updated_at: u.updated_at })
+            .eq('id', u.id)
+        )
+      );
+
+      const firstErr = results.find(r => r.error);
+      if (firstErr?.error) throw new Error(firstErr.error.message);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-      throw err;
+      // Always extract a readable message — Supabase errors are plain objects,
+      // not Error instances, so String(err) would produce "[object Object]".
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (err as { message?: string })?.message ?? JSON.stringify(err);
+      console.error('[lockRoomSquads] Failed:', msg);
+      setError(msg);
+      throw new Error(msg); // re-throw as a proper Error so callers get a string
     }
   };
+
 
   return {
     rooms, activeRoom, loading, error, patchActiveRoom,

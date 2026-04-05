@@ -306,6 +306,8 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   };
 
   const handleTeamMappingUpdate = async (globalTeamId: string, iplTeam: string) => {
+    // Never sync team changes into the room when modifications are locked
+    if (dropdownsFrozen) return;
     if (!globalTeamId || !iplTeam) return;
     try {
       await updateRoomTeam(roomId, globalTeamId, iplTeam);
@@ -315,6 +317,11 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   };
 
   const handleManualUpdate = async () => {
+    // Blocked for everyone (including admin) when modify_teams is off
+    if (dropdownsFrozen) {
+      toast.error('Team modifications are locked by the admin.');
+      return;
+    }
     if (!selectedGlobalTeamId || !selectedIplTeam) {
       toast.error('Please select both a team and an IPL franchise.');
       return;
@@ -328,23 +335,36 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
     }
   };
 
-  // Admin Switch Handlers - Optimistic Update implemented!
+  // Admin Switch Handlers
   const toggleLockRoom = async () => {
     const nextState = !isLockRoom;
-    await updateRoom(roomId, { settings: { ...settings, lock_room: nextState } });
-    if (nextState === true) {
-      await lockRoomSquads(roomId, participants);
+    try {
+      await updateRoom(roomId, { settings: { ...settings, lock_room: nextState } });
+      if (nextState === true) {
+        await lockRoomSquads(roomId);
+        await fetchParticipants(true); // Refresh so UI reflects the new locked_squad
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to lock room');
     }
   };
 
   const toggleModifyTeams = async () => {
     const nextState = !isModifyTeamsRaw;
-    if (!nextState) {
-      await updateRoom(roomId, { settings: { ...settings, modify_teams: nextState, lock_room: true } });
-    } else {
-      await updateRoom(roomId, { settings: { ...settings, modify_teams: nextState } });
+    try {
+      if (!nextState) {
+        // Turning modify OFF: lock the room and snapshot all squads atomically
+        await updateRoom(roomId, { settings: { ...settings, modify_teams: false, lock_room: true } });
+        await lockRoomSquads(roomId);
+        await fetchParticipants(true); // Refresh so UI reflects the new locked_squad
+      } else {
+        await updateRoom(roomId, { settings: { ...settings, modify_teams: true } });
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to toggle team modification');
     }
   };
+
 
   const toggleAllowDuplicates = async () => {
     await updateRoom(roomId, { settings: { ...settings, allow_duplicates: !allowDuplicates } });
@@ -535,9 +555,20 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                               <div className="flex items-center gap-4">
                                 {p.ipl_team ? (
                                   <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white/5 border border-white/10 p-1">
-                                    <Image src={`/logos/${p.ipl_team.toLowerCase()}.png`} width={40} height={40} alt={p.ipl_team} className="object-contain w-full h-full drop-shadow"
-                                      onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
-                                    <div className={`hidden w-full h-full flex justify-center items-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>{p.ipl_team.substring(0, 3)}</div>
+                                    {/* Plain <img> avoids Next.js image optimizer pipeline — static PNGs in /public/logos/ serve directly */}
+                                    <img
+                                      src={`/logos/${p.ipl_team.toLowerCase()}.png`}
+                                      alt={p.ipl_team}
+                                      width={40}
+                                      height={40}
+                                      className="object-contain w-full h-full drop-shadow"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                        if (fallback) fallback.style.display = 'flex';
+                                      }}
+                                    />
+                                    <div style={{ display: 'none' }} className={`w-full h-full flex justify-center items-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>{p.ipl_team.substring(0, 3)}</div>
                                   </div>
                                 ) : (
                                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>
@@ -601,7 +632,12 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                   Manage Team
                   {dropdownsFrozen && <Lock size={12} className="text-outline" strokeWidth={3} />}
                 </h3>
-                <button onClick={handleManualUpdate} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-primary text-on-primary px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">
+                <button
+                  onClick={handleManualUpdate}
+                  disabled={dropdownsFrozen}
+                  title={dropdownsFrozen ? 'Team modifications are locked' : 'Update team selection'}
+                  className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-primary text-on-primary px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary"
+                >
                   Update
                 </button>
               </div>
