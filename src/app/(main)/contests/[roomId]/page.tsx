@@ -11,14 +11,14 @@ import { usePlayerMatchHistory, getRelativeMatchPoints } from '@/hooks/usePlayer
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import { formatSkillName } from '@/utils/formatters';
-import { UserMinus, Trash2, Eye, BadgeInfo, LogOut, Copy, Check, ChevronDown, Lock, MoreVertical, ShieldCheck, Pen, ArrowLeft, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { UserMinus, Trash2, Eye, BadgeInfo, Crown, LogOut, Copy, Check, ChevronDown, Lock, MoreVertical, ShieldCheck, Pen, ArrowLeft, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { RoomParticipant } from '@/types';
 
 // Official IPL team colors (same as My Team page)
 const TEAM_COLOR: Record<string, string> = {
-  'CSK':'#FFD700','MI':'#004BA0','RCB':'#D4001C','KKR':'#3A225D',
-  'SRH':'#F7812A','DC':'#0078BC','PBKS':'#ED1B24','RR':'#254AA5',
-  'GT':'#1B4087','LSG':'#A7CC44',
+  'CSK': '#FFD700', 'MI': '#004BA0', 'RCB': '#D4001C', 'KKR': '#3A225D',
+  'SRH': '#F7812A', 'DC': '#0078BC', 'PBKS': '#ED1B24', 'RR': '#254AA5',
+  'GT': '#1B4087', 'LSG': '#A7CC44',
 };
 
 const IPL_FRANCHISES = [
@@ -375,122 +375,122 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   return (
     <div className="max-w-7xl mx-auto w-full">
 
-        {/* Header Section */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-3">
-            <nav className="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase items-center">
-              <span>Contests</span>
-              <span>/</span>
-              <span className="text-indigo-400">{isShellLoading ? '...' : activeRoom?.name}</span>
-            </nav>
-            {isShellLoading ? (
-              <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
-            ) : !isHost ? (
-              <button onClick={handleLeave} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
-                <LogOut size={14} strokeWidth={2.5} /> Leave Contest
-              </button>
-            ) : (
-              <button onClick={handleDeleteContest} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
-                <Trash2 size={14} strokeWidth={2.5} /> Delete Contest
-              </button>
-            )}
-          </div>
+      {/* Header Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-3">
+          <nav className="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase items-center">
+            <span>Contests</span>
+            <span>/</span>
+            <span className="text-indigo-400">{isShellLoading ? '...' : activeRoom?.name}</span>
+          </nav>
+          {isShellLoading ? (
+            <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
+          ) : !isHost ? (
+            <button onClick={handleLeave} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
+              <LogOut size={14} strokeWidth={2.5} /> Leave Contest
+            </button>
+          ) : (
+            <button onClick={handleDeleteContest} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
+              <Trash2 size={14} strokeWidth={2.5} /> Delete Contest
+            </button>
+          )}
+        </div>
 
-          <div className="flex justify-between items-start gap-12">
-            <div className="flex-grow group">
-              <div className="flex items-center gap-3">
-                {isShellLoading ? (
-                  <div className="h-12 w-64 bg-white/5 rounded-xl animate-pulse mt-1" />
-                ) : isEditingTitle && isHost ? (
-                  <input
-                    autoFocus
-                    className="bg-surface-container-low text-5xl font-black font-headline text-on-surface leading-tight w-full outline-none border-b-2 border-primary border-dashed"
-                    value={editTitleBuffer}
-                    onChange={e => setEditTitleBuffer(e.target.value)}
-                    onBlur={handleTitleSubmit}
-                    onKeyDown={e => e.key === 'Enter' && handleTitleSubmit()}
-                  />
-                ) : (
-                  <h2
-                    onDoubleClick={() => isHost && setIsEditingTitle(true)}
-                    className={`text-5xl font-black font-headline text-on-surface leading-tight ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
-                    title={isHost ? "Double click to rename" : ""}
-                  >
-                    {activeRoom?.name}
-                  </h2>
-                )}
-                {isHost && (
-                  <button onClick={() => {
-                    if (isEditingTitle) handleTitleSubmit();
-                    else setIsEditingTitle(true);
-                  }}
-                    className={`p-2 rounded-full transition-all flexitems-center gap-2 text-xs font-bold uppercase tracking-widest ${isEditingTitle ? 'bg-primary text-on-primary hover:bg-primary/90' : 'text-primary bg-primary/10 hover:bg-primary/20 opacity-0 group-hover:opacity-100'}`}>
-                    {isEditingTitle ? <Check size={16} strokeWidth={2.5} /> : <span className="flex items-center gap-2"><Pen size={14} strokeWidth={2.5} /> Edit</span>}
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {isEditingDesc && isHost ? (
-                  <input
-                    autoFocus
-                    className="bg-surface-container-low text-on-surface-variant mt-2 w-full max-w-lg outline-none border-b border-primary/50 border-dashed"
-                    value={editDescBuffer}
-                    onChange={e => setEditDescBuffer(e.target.value)}
-                    onBlur={handleDescSubmit}
-                    onKeyDown={e => e.key === 'Enter' && handleDescSubmit()}
-                  />
-                ) : (
-                  <p
-                    onDoubleClick={() => isHost && setIsEditingDesc(true)}
-                    className={`text-on-surface-variant mt-2 max-w-lg ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
-                    title={isHost ? "Double click to rename" : ""}
-                  >
-                    {activeRoom?.description || 'A single line description about anything'}
-                  </p>
-                )}
-                {isHost && (
-                  <button onClick={() => {
-                    if (isEditingDesc) handleDescSubmit();
-                    else setIsEditingDesc(true);
-                  }}
-                    className={`mt-2 p-1.5 rounded text-xs font-bold uppercase tracking-widest transition-all ${isEditingDesc ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'text-outline hover:text-primary opacity-0 group-hover:opacity-100'}`}>
-                    {isEditingDesc ? <Check size={14} strokeWidth={2.5} /> : <Pen size={12} strokeWidth={2.5} />}
-                  </button>
-                )}
-              </div>
+        <div className="flex justify-between items-start gap-12">
+          <div className="flex-grow group">
+            <div className="flex items-center gap-3">
+              {isShellLoading ? (
+                <div className="h-12 w-64 bg-white/5 rounded-xl animate-pulse mt-1" />
+              ) : isEditingTitle && isHost ? (
+                <input
+                  autoFocus
+                  className="bg-surface-container-low text-5xl font-black font-headline text-on-surface leading-tight w-full outline-none border-b-2 border-primary border-dashed"
+                  value={editTitleBuffer}
+                  onChange={e => setEditTitleBuffer(e.target.value)}
+                  onBlur={handleTitleSubmit}
+                  onKeyDown={e => e.key === 'Enter' && handleTitleSubmit()}
+                />
+              ) : (
+                <h2
+                  onDoubleClick={() => isHost && setIsEditingTitle(true)}
+                  className={`text-5xl font-black font-headline text-on-surface leading-tight ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
+                  title={isHost ? "Double click to rename" : ""}
+                >
+                  {activeRoom?.name}
+                </h2>
+              )}
+              {isHost && (
+                <button onClick={() => {
+                  if (isEditingTitle) handleTitleSubmit();
+                  else setIsEditingTitle(true);
+                }}
+                  className={`p-2 rounded-full transition-all flexitems-center gap-2 text-xs font-bold uppercase tracking-widest ${isEditingTitle ? 'bg-primary text-on-primary hover:bg-primary/90' : 'text-primary bg-primary/10 hover:bg-primary/20 opacity-0 group-hover:opacity-100'}`}>
+                  {isEditingTitle ? <Check size={16} strokeWidth={2.5} /> : <span className="flex items-center gap-2"><Pen size={14} strokeWidth={2.5} /> Edit</span>}
+                </button>
+              )}
             </div>
 
-            <div className="shrink-0 pt-2">
-              {isShellLoading ? (
-                <div className="h-12 w-32 bg-white/5 rounded-lg animate-pulse" />
+            <div className="flex items-center gap-3">
+              {isEditingDesc && isHost ? (
+                <input
+                  autoFocus
+                  className="bg-surface-container-low text-on-surface-variant mt-2 w-full max-w-lg outline-none border-b border-primary/50 border-dashed"
+                  value={editDescBuffer}
+                  onChange={e => setEditDescBuffer(e.target.value)}
+                  onBlur={handleDescSubmit}
+                  onKeyDown={e => e.key === 'Enter' && handleDescSubmit()}
+                />
               ) : (
-                <div className="bg-surface-container-high/50 border border-white/5 px-3 py-1 rounded-lg flex items-center gap-5 backdrop-blur-sm group hover:border-indigo-500/30 transition-all">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1">Invite Code</span>
-                    <span className="font-mono text-sm font-bold text-on-surface text-left">{activeRoom?.invite_code}</span>
-                  </div>
-                  <button onClick={() => navigator.clipboard.writeText(activeRoom?.invite_code || '')} className="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors" title="Copy Code">
-                    <Copy size={16} strokeWidth={2.5} />
-                  </button>
-                </div>
+                <p
+                  onDoubleClick={() => isHost && setIsEditingDesc(true)}
+                  className={`text-on-surface-variant mt-2 max-w-lg ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
+                  title={isHost ? "Double click to rename" : ""}
+                >
+                  {activeRoom?.description || 'A single line description about anything'}
+                </p>
+              )}
+              {isHost && (
+                <button onClick={() => {
+                  if (isEditingDesc) handleDescSubmit();
+                  else setIsEditingDesc(true);
+                }}
+                  className={`mt-2 p-1.5 rounded text-xs font-bold uppercase tracking-widest transition-all ${isEditingDesc ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'text-outline hover:text-primary opacity-0 group-hover:opacity-100'}`}>
+                  {isEditingDesc ? <Check size={14} strokeWidth={2.5} /> : <Pen size={12} strokeWidth={2.5} />}
+                </button>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Full-body conditional: Team Detail OR normal Bento Layout */}
-        {viewingParticipant ? (
-          <TeamDetailView
-            participant={viewingParticipant}
-            allParticipants={participantsWithScores}
-            players={players}
-            isModifyTeams={isModifyTeams}
-            onBack={() => setViewingParticipant(null)}
-            onSwitch={(p) => setViewingParticipant(p)}
-          />
-        ) : (
-          <div className="grid grid-cols-12 gap-6">
+          <div className="shrink-0 pt-2">
+            {isShellLoading ? (
+              <div className="h-12 w-32 bg-white/5 rounded-lg animate-pulse" />
+            ) : (
+              <div className="bg-surface-container-high/50 border border-white/5 px-3 py-1 rounded-lg flex items-center gap-5 backdrop-blur-sm group hover:border-indigo-500/30 transition-all">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1">Invite Code</span>
+                  <span className="font-mono text-sm font-bold text-on-surface text-left">{activeRoom?.invite_code}</span>
+                </div>
+                <button onClick={() => navigator.clipboard.writeText(activeRoom?.invite_code || '')} className="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors" title="Copy Code">
+                  <Copy size={16} strokeWidth={2.5} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Full-body conditional: Team Detail OR normal Bento Layout */}
+      {viewingParticipant ? (
+        <TeamDetailView
+          participant={viewingParticipant}
+          allParticipants={participantsWithScores}
+          players={players}
+          isModifyTeams={isModifyTeams}
+          onBack={() => setViewingParticipant(null)}
+          onSwitch={(p) => setViewingParticipant(p)}
+        />
+      ) : (
+        <div className="grid grid-cols-12 gap-6">
 
           {/* Left Column: Leaderboard */}
           <div className="col-span-12 lg:col-span-8 order-2 lg:order-1">
@@ -548,7 +548,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                           <tr key={p.id} className={`transition-colors group ${isMe ? 'bg-indigo-500/[0.08] ring-1 ring-inset ring-indigo-500/20 hover:bg-indigo-500/[0.12]' : 'hover:bg-white/5'}`}>
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-1">
-                                {idx === 0 && p.score > 0 && <BadgeInfo size={14} className="text-tertiary mr-1 fill-tertiary/20" strokeWidth={2.5} />}
+                                {idx === 0 && p.score > 0 && <Crown size={14} className="text-tertiary mr-1 fill-tertiary/20" strokeWidth={2.5} />}
                                 <span className="text-on-surface font-semibold">{idx + 1}</span>
                               </div>
                             </td>
@@ -746,9 +746,9 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
             )}
 
           </div>
-          </div>
-        )} {/* end team-detail/bento conditional */}
-      </div>
+        </div>
+      )} {/* end team-detail/bento conditional */}
+    </div>
   );
 }
 
