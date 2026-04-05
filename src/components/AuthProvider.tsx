@@ -29,128 +29,144 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Track whether the initial session check has already run so that the
-  // onAuthStateChange listener (which fires immediately on mount) does not
-  // redundantly re-trigger a loading flip and cause a double-render flicker.
-  const initializedRef = useRef(false);
-
-  // Track the current user ID so we can detect genuine user changes
-  // (new sign-in / sign-out) vs silent token refreshes for the same user.
-  // A ref avoids stale closure issues inside the auth listener callback.
+  // Tracks the current user ID so we can detect genuine sign-ins vs silent
+  // same-user token refreshes, without stale closure issues.
   const currentUserIdRef = useRef<string | undefined>(undefined);
 
+  // ── fetchProfile ────────────────────────────────────────────────────────────
+  // Fetches the user profile row. Has its own 5 s timeout so a slow/unreachable
+  // Supabase instance never leaves loading=true indefinitely.
   const fetchProfile = useCallback(async (userId: string) => {
+    // Race the real fetch against a 5 s timeout. If Supabase is unreachable
+    // the timeout wins and we unblock the UI rather than hanging forever.
+    const fetchPromise = supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Profile fetch timed out')), 5000)
+    );
+
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
+        console.error('[Auth] Error fetching profile:', error.message);
       } else if (data) {
         setProfile(data as Profile);
       }
-    } catch (err) {
-      console.error('Failed to fetch profile', err);
+    } catch (err: unknown) {
+      // Timeout or network failure — log and move on. The user will still be
+      // authenticated; they just won't have a profile object yet.
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[Auth] fetchProfile did not complete:', msg);
     } finally {
-      setLoading(false);
+      setLoading(false); // Always unblock, errors or not
     }
   }, []);
 
+  // ── Auth subscription ────────────────────────────────────────────────────────
   useEffect(() => {
-    // Step 1: grab the persisted session synchronously via getSession so we
-    // can immediately set user state without waiting for the listener.
-    const initSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-
-      if (error) console.error('Error fetching session:', error);
-
-      initializedRef.current = true;
-      currentUserIdRef.current = session?.user?.id;
-
-      setSession(session);
-      setUser(session?.user || null);
-
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    };
-
-    // Step 2: listen for subsequent auth changes (sign-in/sign-out events).
-    // We skip INITIAL_SESSION (handled by initSession above).
-    // For TOKEN_REFRESHED and any other silent-refresh-like event (SIGNED_IN
-    // fired for the SAME user), we must NOT show a loading spinner — that
-    // would blank out every page momentarily on every tab focus.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // INITIAL_SESSION: already handled by initSession, skip.
-        if (event === 'INITIAL_SESSION') return;
-
-        // TOKEN_REFRESHED fires silently when the user returns to the tab.
-        // The session user hasn't changed, so we only update the session token
-        // without triggering any loading state or profile re-fetch.
-        if (event === 'TOKEN_REFRESHED') {
-          setSession(session);
-          return;
+    // ── Safety net ────────────────────────────────────────────────────────────
+    // If Supabase never fires INITIAL_SESSION within 8 s (e.g. the CDN/network
+    // is completely unreachable), force loading=false so the app is never
+    // permanently stuck on a skeleton. The user will see the login page instead
+    // of an infinite spinner.
+    const safetyTimer = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn('[Auth] Init safety timeout fired after 8 s — unblocking UI');
         }
+        return false;
+      });
+    }, 8000);
 
-        // For all other events (SIGNED_IN, USER_UPDATED, SIGNED_OUT…)
-        // determine whether this is a *genuine* user change or a silent
-        // re-auth for the same account (e.g. Supabase fires SIGNED_IN on
-        // some token refreshes when the JWT has fully expired).
-        const incomingUserId = session?.user?.id;
-        const isNewUser = incomingUserId !== currentUserIdRef.current;
-        currentUserIdRef.current = incomingUserId;
-
+    // ── Supabase auth listener ────────────────────────────────────────────────
+    // We use onAuthStateChange exclusively (canonical Supabase v2 pattern).
+    // The INITIAL_SESSION event fires immediately with the persisted session from
+    // localStorage, so we never need to call getSession() separately.
+    // getSession() can make a network call if the token is expired and that
+    // network call can hang — this pattern avoids that entirely.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // ── INITIAL_SESSION ────────────────────────────────────────────────────
+      // Fires immediately on subscription creation with the current persisted
+      // session. This is our startup path — no separate getSession() required.
+      if (event === 'INITIAL_SESSION') {
+        clearTimeout(safetyTimer);
+        currentUserIdRef.current = session?.user?.id;
         setSession(session);
-        setUser(session?.user || null);
+        setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Only block the UI with a loading spinner when a genuinely new
-          // user signs in.  For same-user silent refreshes keep the UI alive.
-          if (isNewUser) setLoading(true);
+          // fetchProfile has its own timeout + finally setLoading(false)
           await fetchProfile(session.user.id);
         } else {
-          setProfile(null);
           setLoading(false);
         }
+        return;
       }
-    );
 
-    initSession();
+      // ── TOKEN_REFRESHED ────────────────────────────────────────────────────
+      // Fires silently when the user returns to the tab. The access token
+      // has been refreshed but no user change occurred — just update the session
+      // object so API calls use the fresh token. Never show a loading spinner.
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(session);
+        return;
+      }
+
+      // ── SIGNED_IN, USER_UPDATED, SIGNED_OUT, etc. ─────────────────────────
+      // Determine whether this is a genuine user change (new sign-in / sign-out)
+      // or a silent re-auth for the same account. We only show a loading spinner
+      // on genuine user transitions — never on same-user silent refreshes.
+      const incomingUserId = session?.user?.id;
+      const isNewUser = incomingUserId !== currentUserIdRef.current;
+      currentUserIdRef.current = incomingUserId;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        if (isNewUser) setLoading(true);
+        await fetchProfile(session.user.id);
+      } else {
+        // Signed out — clear local state immediately
+        setProfile(null);
+        setLoading(false);
+      }
+    });
 
     return () => {
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
-  const signInWithGoogle = async () => {
+  // ── Auth actions ─────────────────────────────────────────────────────────────
+
+  const signInWithGoogle = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-      if (error) {
-        console.error('Error signing in with Google:', error.message);
-      }
+      if (error) console.error('[Auth] OAuth error:', error.message);
     } catch (err: unknown) {
-      console.error('Sign-in catch error:', err);
+      console.error('[Auth] Sign-in failed:', err);
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Error signing out:', error.message);
+      console.error('[Auth] Sign-out error:', error.message);
       throw error;
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signInWithGoogle, signOut }}>
