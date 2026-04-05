@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 import { Profile } from '@/types';
@@ -34,7 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // redundantly re-trigger a loading flip and cause a double-render flicker.
   const initializedRef = useRef(false);
 
-  const fetchProfile = async (userId: string) => {
+  // Track the current user ID so we can detect genuine user changes
+  // (new sign-in / sign-out) vs silent token refreshes for the same user.
+  // A ref avoids stale closure issues inside the auth listener callback.
+  const currentUserIdRef = useRef<string | undefined>(undefined);
+
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -52,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Step 1: grab the persisted session synchronously via getSession so we
@@ -63,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) console.error('Error fetching session:', error);
 
       initializedRef.current = true;
+      currentUserIdRef.current = session?.user?.id;
 
       setSession(session);
       setUser(session?.user || null);
@@ -75,8 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Step 2: listen for subsequent auth changes (sign-in/sign-out events).
-    // We skip INITIAL_SESSION (handled by initSession above) and TOKEN_REFRESHED
-    // (fires on every tab focus — no user change, so no loading flip needed).
+    // We skip INITIAL_SESSION (handled by initSession above).
+    // For TOKEN_REFRESHED and any other silent-refresh-like event (SIGNED_IN
+    // fired for the SAME user), we must NOT show a loading spinner — that
+    // would blank out every page momentarily on every tab focus.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         // INITIAL_SESSION: already handled by initSession, skip.
@@ -90,11 +98,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // For all other events (SIGNED_IN, USER_UPDATED, SIGNED_OUT…)
+        // determine whether this is a *genuine* user change or a silent
+        // re-auth for the same account (e.g. Supabase fires SIGNED_IN on
+        // some token refreshes when the JWT has fully expired).
+        const incomingUserId = session?.user?.id;
+        const isNewUser = incomingUserId !== currentUserIdRef.current;
+        currentUserIdRef.current = incomingUserId;
+
         setSession(session);
         setUser(session?.user || null);
 
         if (session?.user) {
-          setLoading(true);
+          // Only block the UI with a loading spinner when a genuinely new
+          // user signs in.  For same-user silent refreshes keep the UI alive.
+          if (isNewUser) setLoading(true);
           await fetchProfile(session.user.id);
         } else {
           setProfile(null);

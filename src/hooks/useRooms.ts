@@ -21,21 +21,31 @@ export function useRooms() {
   // isFetching prevents multiple simultaneous fetches
   const isFetchingRef = useRef(false);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const roomFetchAbortControllerRef = useRef<AbortController | null>(null);
+
   const fetchMyRooms = useCallback(async (isBackground = false) => {
     if (!user?.id) return;
     if (isFetchingRef.current) return; // Prevent double fire
 
     const hasCache = cachedUserId === user.id && cachedRooms.length > 0;
 
-    // Only show page-level loading spinner on true first load (no data at all)
     if (!hasCache && !isBackground) setLoading(true);
     isFetchingRef.current = true;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       const { data: participantsData, error: partsError } = await supabase
         .from('room_participants')
         .select('room_id')
-        .eq('profile_id', user.id);
+        .eq('profile_id', user.id)
+        .abortSignal(controller.signal);
 
       if (partsError) throw partsError;
 
@@ -44,7 +54,8 @@ export function useRooms() {
       const { data: createdRoomsData, error: createdRoomsError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('creator_id', user.id);
+        .eq('creator_id', user.id)
+        .abortSignal(controller.signal);
 
       if (createdRoomsError) throw createdRoomsError;
 
@@ -55,14 +66,16 @@ export function useRooms() {
         const { data: roomsData, error: roomsError } = await supabase
           .from('rooms')
           .select('*')
-          .in('id', allRoomIds);
+          .in('id', allRoomIds)
+          .abortSignal(controller.signal);
 
         if (roomsError) throw roomsError;
 
         const { data: countData } = await supabase
           .from('room_participants')
           .select('room_id')
-          .in('room_id', allRoomIds);
+          .in('room_id', allRoomIds)
+          .abortSignal(controller.signal);
 
         const countMap: Record<string, number> = {};
         (countData || []).forEach((row: { room_id: string }) => {
@@ -84,14 +97,17 @@ export function useRooms() {
         setRooms([]);
       }
     } catch (err: unknown) {
+      if ((err as Error).name === 'AbortError') {
+        console.log('Fetch rooms aborted');
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      // Always clear loading, regardless of isBackground — the skeleton condition
-      // `roomsLoading && rooms.length === 0` means this is safe: if we had data
-      // and isBackground was true we never showed the skeleton, so clearing here
-      // has no visual effect.
-      setLoading(false);
-      isFetchingRef.current = false;
+      clearTimeout(timeoutId);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        isFetchingRef.current = false;
+      }
     }
   }, [user?.id]);
 
@@ -106,16 +122,22 @@ export function useRooms() {
   }, []);
 
   const fetchRoom = useCallback(async (roomId: string, isBackground = false) => {
-    // CRITICAL FIX: Do NOT set loading=true if we already have activeRoom data.
-    // This prevents the leaderboard skeleton from re-appearing on tab focus.
-    // We only need a "hard" loading state on the very first load.
     if (!isBackground && !activeRoom) setLoading(true);
+
+    if (roomFetchAbortControllerRef.current) {
+      roomFetchAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    roomFetchAbortControllerRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const { data, error } = await supabase
         .from('rooms')
         .select('*')
         .eq('id', roomId)
-        .single();
+        .single()
+        .abortSignal(controller.signal);
 
       if (error) throw error;
 
@@ -124,10 +146,17 @@ export function useRooms() {
       setActiveRoom(room);
       return room;
     } catch (err: unknown) {
+      if ((err as Error).name === 'AbortError') {
+        console.log('Fetch single room aborted');
+        return null;
+      }
       setError(err instanceof Error ? err.message : String(err));
       return null;
     } finally {
-      if (!isBackground) setLoading(false);
+      clearTimeout(timeoutId);
+      if (roomFetchAbortControllerRef.current === controller) {
+        setLoading(false);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

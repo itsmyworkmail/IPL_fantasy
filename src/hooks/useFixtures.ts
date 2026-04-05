@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { TourFixture } from '@/types';
 
@@ -27,17 +27,31 @@ export function useFixtures(): UseFixturesReturn {
   const [loading, setLoading] = useState<boolean>(!hasCached);
   const [error, setError] = useState<string | null>(null);
 
+  // Prevents simultaneous fetches — avoids the "abort previous" pattern that
+  // causes `AbortError: signal is aborted without reason` in the console.
+  const isFetchingRef = useRef(false);
+
   const fetchFixtures = useCallback(async (isBackground: boolean = false) => {
     if (isBackground && Date.now() - cacheTimestamp < CACHE_TTL_MS) return;
+    // Skip if a fetch is already in-flight
+    if (isFetchingRef.current) return;
 
-    if (!isBackground) setLoading(true);
+    if (!isBackground && cachedFixtures.length === 0) setLoading(true);
     setError(null);
+    isFetchingRef.current = true;
+
+    // Per-request AbortController only for the timeout scenario
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const { data, error: supabaseError } = await supabase
         .from('fantasy_tour_fixtures')
         .select('*')
-        .order('match_datetime', { ascending: true });
+        .order('match_datetime', { ascending: true })
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
 
       if (supabaseError) throw new Error(supabaseError.message);
       if (data) {
@@ -46,10 +60,18 @@ export function useFixtures(): UseFixturesReturn {
         setFixtures(cachedFixtures);
       }
     } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      // AbortError is expected on timeout — log quietly, never surface to the UI
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Fetch fixtures timed out or aborted — will retry on next focus.');
+        return;
+      }
       console.error('Failed to fetch fixtures:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch fixtures');
     } finally {
-      if (!isBackground) setLoading(false);
+      clearTimeout(timeoutId);
+      isFetchingRef.current = false;
+      setLoading(false);
     }
   }, []);
 
@@ -62,8 +84,15 @@ export function useFixtures(): UseFixturesReturn {
     return () => clearInterval(interval);
   }, [fetchFixtures]);
 
+  // Silently refresh fixture data when the user returns to the tab.
+  // If the cache is still fresh or a fetch is in progress this is a no-op.
+  useEffect(() => {
+    const handleFocus = () => fetchFixtures(true);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchFixtures]);
+
   // ── Derived state ──
-  const now = new Date();
 
   const liveMatch = fixtures.find(f => f.match_status === '1') || null;
 

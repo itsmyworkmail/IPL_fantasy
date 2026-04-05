@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { GamedayPlayer } from '@/types';
 
@@ -23,17 +23,34 @@ export function useFantasyData(refreshIntervalMs: number = 60000): UseFantasyDat
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cacheTimestamp ? new Date(cacheTimestamp) : null);
 
-  const fetchPlayers = useCallback(async (isBackground: boolean = false) => {
-    // Skip if cache is fresh and it is a background refresh check
-    if (isBackground && Date.now() - cacheTimestamp < CACHE_TTL_MS) return;
+  // Prevents simultaneous fetches — avoids the "abort previous" pattern that
+  // causes `AbortError: signal is aborted without reason` in the console.
+  const isFetchingRef = useRef(false);
 
-    if (!isBackground) setLoading(true);
+  const fetchPlayers = useCallback(async (isBackground: boolean = false) => {
+    // Skip if cache is fresh on a background refresh check
+    if (isBackground && Date.now() - cacheTimestamp < CACHE_TTL_MS) return;
+    // Skip if a fetch is already in-flight (prevents duplicate simultaneous requests)
+    if (isFetchingRef.current) return;
+
+    if (!isBackground && cachedPlayers.length === 0) setLoading(true);
     setError(null);
+    isFetchingRef.current = true;
+
+    // Per-request AbortController only for the timeout scenario —
+    // we do NOT abort the previous request, we simply skip new fetches while
+    // one is already in-flight (guarded by isFetchingRef above).
+    const controller = new AbortController();
+    // 30 s timeout — generous enough to survive tab-background timer throttling
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const { data, error: supabaseError } = await supabase
         .from('players')
-        .select('*');
+        .select('*')
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
 
       if (supabaseError) throw new Error(supabaseError.message);
 
@@ -48,10 +65,18 @@ export function useFantasyData(refreshIntervalMs: number = 60000): UseFantasyDat
         setLastUpdated(new Date());
       }
     } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      // AbortError is expected on timeout — log quietly, never surface to the UI
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Fetch players timed out or aborted — will retry on next focus.');
+        return;
+      }
       console.error('Failed to fetch players:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch player data');
     } finally {
-      if (!isBackground) setLoading(false);
+      clearTimeout(timeoutId);
+      isFetchingRef.current = false;
+      setLoading(false);
     }
   }, []);
 
@@ -66,6 +91,14 @@ export function useFantasyData(refreshIntervalMs: number = 60000): UseFantasyDat
       return () => clearInterval(intervalId);
     }
   }, [fetchPlayers, refreshIntervalMs]);
+
+  // Silently refresh player data when the user returns to the tab.
+  // If the cache is still fresh or a fetch is in progress this is a no-op.
+  useEffect(() => {
+    const handleFocus = () => fetchPlayers(true);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchPlayers]);
 
   return { players, loading, error, lastUpdated, refetch: fetchPlayers };
 }

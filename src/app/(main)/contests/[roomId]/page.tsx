@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useCallback } from 'react';
+import { useEffect, useState, use, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
@@ -60,6 +60,10 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   // Team Viewer state
   const [viewingParticipant, setViewingParticipant] = useState<RoomParticipant | null>(null);
 
+  // Guard against simultaneous fetchParticipants calls (focus + realtime can
+  // both fire at the same time, causing the empty-error-object console spam)
+  const isFetchingParticipantsRef = useRef(false);
+
   // Auth Guard
   useEffect(() => {
     if (!authLoading && !user?.id) {
@@ -68,9 +72,11 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   }, [user?.id, authLoading, signInWithGoogle]);
 
   const fetchParticipants = useCallback(async (isBackground = false) => {
+    // Skip if already fetching — prevents simultaneous calls from focus + realtime
+    if (isFetchingParticipantsRef.current) return;
     if (!isBackground) setLoadingMembers(true);
+    isFetchingParticipantsRef.current = true;
     try {
-      // NEW FIX: Fetching directly from room_participants with full foreign key traversal!
       const { data, error } = await supabase
         .from('room_participants')
         .select(`
@@ -106,9 +112,14 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
         if (myParticipantData.ipl_team) setSelectedIplTeam(myParticipantData.ipl_team);
         if (myParticipantData.team_id) setSelectedGlobalTeamId(myParticipantData.team_id);
       }
-    } catch (err) {
-      console.error("Failed to fetch participants", err);
+    } catch (err: unknown) {
+      // Supabase errors are often plain objects — extract the most useful info
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message || JSON.stringify(err);
+      console.error('Failed to fetch participants:', msg, err);
     } finally {
+      isFetchingParticipantsRef.current = false;
       if (!isBackground) setLoadingMembers(false);
     }
   }, [roomId, user?.id]);
