@@ -160,14 +160,14 @@ export default function Lobby() {
                 <div className="text-slate-500 text-sm py-4">No performer data available for this match yet.</div>
               ) : (
                 topPerformers.map((player, idx) => (
-                  <div key={player.player_id} className="min-w-[150px] flex-1 bg-surface-container-high p-4 rounded-xl border border-white/5 hover:border-primary/30 transition-all cursor-pointer group relative">
+                  <div key={player.player_id} className="min-w-[150px] flex-1 bg-surface-container-high p-4 rounded-xl border border-white/5 hover:border-primary/30 transition-all cursor-pointer group relative flex flex-col">
                     {idx === 0 && (
                       <div className="absolute -top-1.5 -right-1.5 bg-amber-400 text-[9px] font-black text-black px-1.5 py-0.5 rounded-full tracking-widest">MVP</div>
                     )}
                     <div className="text-[8px] font-black tracking-widest uppercase text-slate-500 mb-2">{player.team_short_name} • {formatSkillName(player.skill_name)}</div>
                     <h4 className="text-sm font-headline font-bold text-on-surface group-hover:text-primary transition-colors">{player.name}</h4>
-                    <div className="mt-4 flex flex-col">
-                      <span className="text-xl font-headline font-black text-on-surface text-left">{player.gameday_points}</span>
+                    <div className="mt-auto flex flex-col">
+                      <span className="text-xl font-headline font-black text-on-surface text-left mt-3">{player.gameday_points}</span>
                       <span className="text-[9px] font-bold tracking-widest uppercase text-slate-500 text-left">Match Pts</span>
                     </div>
                   </div>
