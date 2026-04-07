@@ -100,10 +100,10 @@ export function useFixtures(): UseFixturesReturn {
     ? liveMatches[liveMatches.length - 1]   // last in ascending match_datetime order = latest
     : null;
 
-  const pastMatches = fixtures.filter(f => f.match_status === '2');
-  
+  const pastMatches = fixtures.filter(f => f.match_status === '2' || f.match_status === '5');
+
   const lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
-  
+
   const upcomingMatch = fixtures.find(f => f.match_status === '0' || !f.match_status) || null;
 
   const isMatchLive = liveMatch !== null;

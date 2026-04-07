@@ -145,7 +145,7 @@ export default function Lobby() {
           <section>
             <h3 className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-6 flex items-center gap-3">
               Top Performers
-              <span className="text-slate-600 normal-case tracking-normal font-normal text-xs">— {topPerformersMatchName}</span>
+              <span className="text-slate-600 normal-case tracking-normal font-normal text-xs">— {topPerformersMatchName} - {performerMatch?.match_status === '5' ? 'Match Abandoned' : ''}</span>
               <div className="h-[1px] w-12 bg-white/10"></div>
             </h3>
 
