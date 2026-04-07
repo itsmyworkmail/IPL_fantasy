@@ -1,10 +1,20 @@
 import { DesktopLayout } from '@/components/DesktopLayout';
+import { MobileShell } from '@/components/MobileShell';
 import { Toaster } from 'react-hot-toast';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <DesktopLayout>{children}</DesktopLayout>
+      {/* ── Desktop layout: sidebar + top header (≥ md) ── */}
+      <div className="hidden md:block">
+        <DesktopLayout>{children}</DesktopLayout>
+      </div>
+
+      {/* ── Mobile layout: top app bar + bottom nav (< md) ── */}
+      <div className="md:hidden">
+        <MobileShell>{children}</MobileShell>
+      </div>
+
       <Toaster
         position="bottom-right"
         toastOptions={{

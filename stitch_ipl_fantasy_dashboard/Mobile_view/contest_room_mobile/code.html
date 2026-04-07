@@ -1,0 +1,555 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>CricTrack - Contest Room</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#fd9000",
+                    "secondary-fixed-dim": "#ffb470",
+                    "inverse-on-surface": "#52555c",
+                    "error": "#ff6e84",
+                    "on-secondary-container": "#fff6f1",
+                    "secondary-dim": "#ea8400",
+                    "surface-dim": "#0b0e14",
+                    "primary-fixed-dim": "#9c7eff",
+                    "secondary-container": "#8e4e00",
+                    "primary": "#7C4DFF",
+                    "tertiary-fixed": "#3fff8b",
+                    "primary-dim": "#6200ea",
+                    "background": "#0b0e14",
+                    "surface": "#0b0e14",
+                    "on-background": "#ecedf6",
+                    "on-error": "#490013",
+                    "outline-variant": "#45484f",
+                    "on-secondary": "#462400",
+                    "surface-container-low": "#10131a",
+                    "on-tertiary-container": "#005d2c",
+                    "surface-tint": "#7C4DFF",
+                    "surface-container-highest": "#22262f",
+                    "inverse-surface": "#f9f9ff",
+                    "surface-bright": "#282c36",
+                    "error-dim": "#d73357",
+                    "on-tertiary-fixed": "#004820",
+                    "surface-container": "#161a21",
+                    "on-surface-variant": "#a9abb3",
+                    "on-secondary-fixed": "#512a00",
+                    "surface-variant": "#22262f",
+                    "tertiary-fixed-dim": "#24f07e",
+                    "on-secondary-fixed-variant": "#7a4300",
+                    "on-primary": "#ffffff",
+                    "tertiary-container": "#3fff8b",
+                    "outline": "#73757d",
+                    "surface-container-high": "#1c2028",
+                    "primary-fixed": "#a98fff",
+                    "on-surface": "#ecedf6",
+                    "secondary-fixed": "#ffc697",
+                    "on-primary-container": "#ffffff",
+                    "inverse-primary": "#6834eb",
+                    "on-tertiary": "#006731",
+                    "error-container": "#a70138",
+                    "tertiary": "#b5ffc2",
+                    "on-error-container": "#ffb2b9",
+                    "tertiary-dim": "#24f07e",
+                    "on-tertiary-fixed-variant": "#006832",
+                    "primary-container": "#7C4DFF",
+                    "surface-container-lowest": "#000000",
+                    "on-primary-fixed-variant": "#32008a",
+                    "on-primary-fixed": "#000000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Manrope"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            z-index: 50;
+            min-width: 120px;
+        }
+        .dropdown-menu.active {
+            display: block;
+        }
+        /* Custom height for 7 visible items in leaderboard */
+        .leaderboard-scroll-area {
+            height: 406px; /* Approx 58px per item * 7 */
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body select-none">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#0b0e14]/80 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-black/40 flex justify-between items-center px-4 h-16">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20">
+<img alt="user profile avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtGBcKZzSB_g6sqQPSZkGYgW4bH45-9bAtc0G3OL8M4ywVoWgQhho9I9SpYo1m4QRA_KCXDrbWgLSCIyzKrEFRbz39lx0487O-DwTMQ4Id1iZx_25Mdi-zHRxWCpDwXwqEAn4iH4RvJrbyBXN3lwOXIMhdREVjdHH-1yu772RbTLbhWWTAqjLcfsT1QnUmFTAJ5fy2UAzpguj8xg8eBKIP6iNQ_Z08yDL1CrRaguwcuu_yNnvyC6NhIGjnzQrsjo2PkiVj9gSf-Q" style="">
+</div>
+<h1 class="font-headline text-lg font-bold text-primary" style="">CricTrack</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-primary active:scale-95 duration-200 hover:bg-white/5 p-2 rounded-full" style="">
+<span class="material-symbols-outlined" style="">notifications</span>
+</button>
+</div>
+</nav>
+<main class="pt-20 pb-28 px-4 max-w-md mx-auto space-y-4">
+<!-- Refined Contest Header Card -->
+<header class="relative overflow-hidden rounded-xl bg-surface-container-high p-4 border border-white/5">
+<div class="flex justify-between items-center mb-4">
+<span class="text-[10px] font-label font-bold text-tertiary-dim bg-tertiary/10 px-2.5 py-1 rounded-full uppercase tracking-wider" style="">50 TEAMS</span>
+<div class="bg-surface-container-highest/60 rounded-lg py-1.5 px-2.5 flex items-center gap-2 border border-white/10 shrink-0">
+<div class="flex items-center gap-1.5">
+<span class="text-[8px] font-label text-outline uppercase tracking-wider" style="">CODE</span>
+<span class="text-primary font-headline font-bold text-[11px] tracking-widest leading-none" style="">CRIC-IPL26</span>
+</div>
+<button class="text-primary active:scale-90 transition-transform flex items-center" style="">
+<span class="material-symbols-outlined text-[16px]" style="">content_copy</span>
+</button>
+</div>
+</div>
+<div class="space-y-1">
+<h2 class="font-headline text-xl font-extrabold text-on-background leading-tight" style="">Champions Trophy Room</h2>
+<p class="text-on-surface-variant text-xs font-body" style="">A friendly IPL fantasy contest</p>
+</div>
+</header>
+<!-- Scrollable Leaderboard Section -->
+<section class="flex flex-col">
+<div class="flex items-center justify-between mb-2 px-1 border-b border-white/5 pb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl" style="">bar_chart</span>
+<h3 class="font-headline text-base font-bold text-on-background uppercase tracking-tight" style="">Leaderboard</h3>
+</div>
+<button class="text-primary text-xs font-label font-bold uppercase tracking-wide" style="">View All</button>
+</div>
+<div class="space-y-1.5 overflow-y-auto hide-scrollbar leaderboard-scroll-area pr-1">
+<!-- Leaderboard Entries (Exactly 10) -->
+<!-- Rank 1-3 as in source -->
+<div class="relative group bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-secondary" style="">1</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden border border-primary/20">
+<img alt="Player" class="w-8 h-8 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC88ySPr3o2nu38O5y9bs1M1fi8s7jtQHDvNWwbwzgHlj4Aga6PqK1wRz1w4hvolxlY0WEO_kxXv0PhLaqpJ7EyTdGPM8oEkzzczrQ8jGz1URwYSHl38HeQfhcgRc7VAdDPxE_6hvy9bOP0aQFzgu_w-nTuXnlO0pYsyM2tKFvVWJPwXcFlIsdc3a4tuZ4R-gSw_AL4PyblL2Vi3ecu_HMw2mRgvx6Scv9MTGeNbXPx2Cty1k8_qhdBUigHOxS6cmNG9SIiaDggsw" style="">
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Rohan Sharma</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Elite Tactician</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-tertiary" style="">1,240</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 2 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">2</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 3 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">3</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 4 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">4</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 5 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">5</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 6 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">6</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 7 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">7</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 8 (Hidden initially, scroll to see) -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">8</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 9 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">9</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+<!-- Rank 10 -->
+<div class="relative group bg-surface-container p-2.5 rounded-xl flex items-center gap-3 border border-white/5">
+<div class="w-6 text-center font-headline font-bold text-xs text-outline" style="">10</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]" style="">PL</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-bold text-on-surface text-xs truncate" style="">Team Member</h4>
+<p class="text-[9px] text-outline uppercase font-label truncate" style="">Challenger</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<p class="font-headline font-extrabold text-sm text-on-surface" style="">1,100</p>
+<p class="text-[8px] text-outline uppercase font-label" style="">Pts</p>
+</div>
+<button class="p-1 text-outline-variant hover:text-on-background more-options-btn" onclick="toggleDropdown(this)" style="">
+<span class="material-symbols-outlined text-lg" style="">more_vert</span>
+</button>
+<div class="dropdown-menu bg-surface-bright border border-white/10 rounded-lg shadow-2xl py-1 mt-1 overflow-hidden">
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-sm" style="">visibility</span> View Team
+        </button>
+<button class="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5" style="">
+<span class="material-symbols-outlined text-sm" style="">person_remove</span> Remove
+        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Tabbed Management Section -->
+<section>
+<div class="flex bg-surface-container-highest/30 p-1 rounded-xl mb-3 border border-white/5">
+<button class="flex-1 py-2 text-xs font-headline transition-all font-medium text-outline-variant" id="tab-contest" style="">
+                    Contest Management
+                </button>
+<button class="flex-1 py-2 text-xs font-headline hover:text-on-background transition-all bg-primary text-on-primary font-bold rounded-lg shadow-lg shadow-primary/20" id="tab-team" style="">
+                    Manage Team
+                </button>
+</div>
+<!-- Contest View -->
+<div class="bg-surface-container rounded-xl divide-y divide-white/5 overflow-hidden border border-white/5 hidden" id="contest-view">
+<div class="px-4 py-3.5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-xl" style="">lock</span>
+<div>
+<p class="font-headline font-bold text-xs" style="">Lock Room</p>
+<p class="text-[10px] text-outline" style="">Prevent new entries</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer scale-90" style="">
+<input class="sr-only peer" type="checkbox">
+<div class="w-10 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="px-4 py-3.5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-xl" style="">edit_note</span>
+<div>
+<p class="font-headline font-bold text-xs" style="">Modify teams</p>
+<p class="text-[10px] text-outline" style="">Allow roster changes</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer scale-90" style="">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-10 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="px-4 py-3.5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary-dim text-xl" style="">content_copy</span>
+<div>
+<p class="font-headline font-bold text-xs" style="">Allow Duplicates</p>
+<p class="text-[10px] text-outline" style="">Identical rosters</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer scale-90" style="">
+<input class="sr-only peer" type="checkbox">
+<div class="w-10 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+<!-- Manage Team View -->
+<div class="bg-surface-container rounded-xl p-4 border border-white/5 space-y-4" id="team-view">
+<div class="space-y-3">
+<div class="relative">
+<label class="text-[9px] font-label text-outline uppercase mb-1.5 block ml-1 font-bold" style="">User Team</label>
+<select class="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold">
+<option>Team 1 (The Challengers)</option>
+<option>Team 2 (Strategic XI)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 text-outline-variant pointer-events-none" style="">expand_more</span>
+</div>
+<div class="relative">
+<label class="text-[9px] font-label text-outline uppercase mb-1.5 block ml-1 font-bold" style="">IPL Franchise</label>
+<select class="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold">
+<option>Royal Challengers Bengaluru (RCB)</option>
+<option>Mumbai Indians (MI)</option>
+<option>Chennai Super Kings (CSK)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 text-outline-variant pointer-events-none" style="">expand_more</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-3.5 rounded-lg font-headline font-extrabold text-[11px] uppercase tracking-widest active:scale-95 transition-transform shadow-lg shadow-primary/20" style="">
+                    Update Team Selection
+                </button>
+</div>
+</section>
+<!-- Danger Zone -->
+<button class="w-full py-4 rounded-xl border border-error/30 text-error font-headline font-extrabold text-[11px] uppercase tracking-[0.2em] active:bg-error/10 transition-colors flex items-center justify-center gap-2" style="">
+<span class="material-symbols-outlined text-base" style="">delete_forever</span>
+            Delete contest room</button>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-[#0b0e14]/90 backdrop-blur-2xl border-t border-white/5 rounded-t-xl shadow-[0_-8px_24px_rgba(0,0,0,0.5)] flex justify-around items-center pt-2 pb-safe px-6 h-20">
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-white transition-all">
+<span class="material-symbols-outlined mb-1" style="">sports_cricket</span>
+<span class="font-label text-[10px] font-bold uppercase tracking-widest" style="">Lobby</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary relative after:content-[''] after:absolute after:-bottom-2 after:w-1 after:h-1 after:bg-primary after:rounded-full">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: &quot;FILL&quot; 1;">leaderboard</span>
+<span class="font-label text-[10px] font-bold uppercase tracking-widest" style="">Contests</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-white transition-all">
+<span class="material-symbols-outlined mb-1" style="">groups</span>
+<span class="font-label text-[10px] font-bold uppercase tracking-widest" style="">My Teams</span>
+</div>
+</nav>
+<script>
+        const tabContest = document.getElementById('tab-contest');
+        const tabTeam = document.getElementById('tab-team');
+        const contestView = document.getElementById('contest-view');
+        const teamView = document.getElementById('team-view');
+
+        tabContest.addEventListener('click', () => {
+            contestView.classList.remove('hidden');
+            teamView.classList.add('hidden');
+            tabContest.classList.add('bg-primary', 'text-on-primary', 'font-bold', 'rounded-lg', 'shadow-lg', 'shadow-primary/20');
+            tabContest.classList.remove('font-medium', 'text-outline-variant');
+            tabTeam.classList.remove('bg-primary', 'text-on-primary', 'font-bold', 'rounded-lg', 'shadow-lg', 'shadow-primary/20');
+            tabTeam.classList.add('font-medium', 'text-outline-variant');
+        });
+
+        tabTeam.addEventListener('click', () => {
+            teamView.classList.remove('hidden');
+            contestView.classList.add('hidden');
+            tabTeam.classList.add('bg-primary', 'text-on-primary', 'font-bold', 'rounded-lg', 'shadow-lg', 'shadow-primary/20');
+            tabTeam.classList.remove('font-medium', 'text-outline-variant');
+            tabContest.classList.remove('bg-primary', 'text-on-primary', 'font-bold', 'rounded-lg', 'shadow-lg', 'shadow-primary/20');
+            tabContest.classList.add('font-medium', 'text-outline-variant');
+        });
+
+        function toggleDropdown(btn) {
+            const menu = btn.nextElementSibling;
+            if (!menu || !menu.classList.contains('dropdown-menu')) return;
+            const isActive = menu.classList.contains('active');
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('active'));
+            if (!isActive) menu.classList.add('active');
+        }
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.more-options-btn')) {
+                document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('active'));
+            }
+        });
+    </script>
+</body></html>

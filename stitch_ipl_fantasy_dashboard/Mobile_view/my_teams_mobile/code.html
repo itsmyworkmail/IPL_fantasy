@@ -1,0 +1,302 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#fd9000",
+                        "secondary-fixed-dim": "#ffb470",
+                        "inverse-on-surface": "#52555c",
+                        "error": "#ff6e84",
+                        "on-secondary-container": "#fff6f1",
+                        "secondary-dim": "#ea8400",
+                        "surface-dim": "#0b0e14",
+                        "primary-fixed-dim": "#9c7eff",
+                        "secondary-container": "#8e4e00",
+                        "primary": "#7C4DFF",
+                        "tertiary-fixed": "#3fff8b",
+                        "primary-dim": "#7C4DFF",
+                        "background": "#0b0e14",
+                        "surface": "#0b0e14",
+                        "on-background": "#ecedf6",
+                        "on-error": "#490013",
+                        "outline-variant": "#45484f",
+                        "on-secondary": "#462400",
+                        "surface-container-low": "#10131a",
+                        "on-tertiary-container": "#005d2c",
+                        "surface-tint": "#7C4DFF",
+                        "surface-container-highest": "#22262f",
+                        "inverse-surface": "#f9f9ff",
+                        "surface-bright": "#282c36",
+                        "error-dim": "#d73357",
+                        "on-tertiary-fixed": "#004820",
+                        "surface-container": "#161a21",
+                        "on-surface-variant": "#a9abb3",
+                        "on-secondary-fixed": "#512a00",
+                        "surface-variant": "#22262f",
+                        "tertiary-fixed-dim": "#24f07e",
+                        "on-secondary-fixed-variant": "#7a4300",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#3fff8b",
+                        "outline": "#73757d",
+                        "surface-container-high": "#1c2028",
+                        "primary-fixed": "#a98fff",
+                        "on-surface": "#ecedf6",
+                        "secondary-fixed": "#ffc697",
+                        "on-primary-container": "#ffffff",
+                        "inverse-primary": "#6834eb",
+                        "on-tertiary": "#006731",
+                        "error-container": "#a70138",
+                        "tertiary": "#b5ffc2",
+                        "on-error-container": "#ffb2b9",
+                        "tertiary-dim": "#24f07e",
+                        "on-tertiary-fixed-variant": "#006832",
+                        "primary-container": "#7C4DFF",
+                        "surface-container-lowest": "#000000",
+                        "on-primary-fixed-variant": "#32008a",
+                        "on-primary-fixed": "#000000"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Manrope"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .circular-progress {
+            background: conic-gradient(#7C4DFF 252deg, rgba(124, 77, 255, 0.1) 0deg);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0b0e14]/80 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-black/40 flex justify-between items-center px-4 h-16">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+<img alt="user profile avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe0mGwN4o_A8GjcBoV-smqd4nmm7joI6tfQab6AlrUxas5Fo93VfDdpvozpH9NYKvuUzgHxiZ-pPZfUqfRMiKXzr6vKwE5PONAc8Nc_Ly1DL5eoPPQdIY03XKmMO5gkEjrJ6U_H4Sp61HftxrGePurvFC4Pa-mo8oDr-NZwkSKCGwmMBt6-dxiQpaTKQ8hnctMSeZ8MQxQlWo_2QfCwGO1D7Febh7-enblXI18I-Q1H2m6GTM3ny0saa6DJeZwU3OggpiGXQa3-Q" style="">
+</div>
+<h1 class="text-xl font-bold italic tracking-tighter text-primary font-headline" style="">CricTrack</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center text-primary hover:bg-white/5 transition-colors active:scale-95 duration-200" style="">
+<span class="material-symbols-outlined" style="">notifications</span>
+</button>
+</header>
+<main class="pt-20 pb-28 px-4 max-w-md mx-auto">
+<!-- Redesigned Stats Section -->
+<div class="flex gap-3 mb-6 h-44">
+<!-- Modernized Season Progress Card -->
+<section class="flex-[1.2] relative overflow-hidden rounded-xl bg-surface-container-high p-4 border border-white/5 shadow-2xl flex flex-col items-center justify-center text-center">
+<div class="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10"></div>
+<div class="relative w-24 h-24 flex items-center justify-center">
+<div class="absolute inset-0 rounded-full border-4 border-white/5"></div>
+<div class="absolute inset-0 rounded-full circular-progress"></div>
+<div class="absolute inset-1.5 bg-surface-container-high rounded-full flex flex-col items-center justify-center">
+<span class="text-2xl font-headline font-extrabold text-on-surface tracking-tighter" style="">701</span>
+<span class="text-[9px] font-bold text-primary tracking-widest uppercase -mt-1" style="">PTS</span>
+</div>
+</div>
+<span class="font-label text-[10px] uppercase tracking-[0.2em] text-outline mt-3 block" style="">Season Progress</span>
+</section>
+<!-- Updated Franchise Distribution Card - 5x2 Grid -->
+<section class="flex-1 bg-surface-container-high rounded-xl p-3 border border-white/5 shadow-2xl overflow-hidden">
+<h2 class="font-label text-[9px] font-bold uppercase tracking-[0.2em] text-outline mb-3" style="">Franchise</h2>
+<div class="grid grid-cols-2 gap-y-2.5 gap-x-1">
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#fcd34d] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">SRH (4)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#3b82f6] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">MI (3)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">RCB (2)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#22c55e] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">CSK (2)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#8b5cf6] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">KKR (1)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#ec4899] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">RR (0)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#06b6d4] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">DC (0)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#f97316] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">GT (0)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#0ea5e9] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">LSG (0)</span>
+</div>
+<div class="flex items-center gap-1.5 min-w-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#eab308] flex-shrink-0"></div>
+<span class="text-[9px] font-bold text-on-surface truncate" style="">PBKS (0)</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Optimized Search & Add Section -->
+<section class="mb-6">
+<div class="flex gap-2">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-base" style="">search</span>
+<input class="w-full bg-surface-container-low border border-white/5 rounded-xl py-2 pl-9 pr-4 text-xs text-on-surface placeholder:text-outline/60 focus:ring-1 focus:ring-primary/50 transition-all shadow-md" placeholder="Search players..." type="text">
+</div>
+<button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex-shrink-0" style="">
+<span class="material-symbols-outlined font-bold text-xl" style="">add</span>
+</button>
+</div>
+</section>
+<!-- Active Squad Tabs -->
+<section class="mb-6">
+<div class="flex items-center gap-2 p-1 bg-surface-container-highest rounded-full mb-6">
+<button class="flex-1 py-2 rounded-full text-xs font-bold uppercase bg-primary text-on-primary transition-all shadow-lg" style="">Team 1</button>
+<button class="flex-1 py-2 rounded-full text-xs font-bold uppercase text-on-surface-variant hover:text-on-surface transition-all" style="">Team 2</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-primary-dim bg-primary/10 hover:bg-primary/20 transition-all" style="">
+<span class="material-symbols-outlined text-sm" style="">add</span>
+</button>
+</div>
+<!-- Controls Bar -->
+<div class="flex items-center justify-between mb-4 px-1">
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold uppercase tracking-wider text-outline" style="">Show in Lobby</span>
+<button class="w-8 h-4 bg-primary rounded-full relative shadow-inner" style="">
+<div class="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
+</button>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 text-outline-variant hover:text-primary transition-colors active:scale-90" style="">
+<span class="material-symbols-outlined text-lg" style="">edit</span>
+</button>
+<button class="p-2 text-outline-variant hover:text-error transition-colors active:scale-90" style="">
+<span class="material-symbols-outlined text-lg" style="">delete</span>
+</button>
+</div>
+</div>
+<!-- Player List -->
+<div class="space-y-3">
+<!-- Header Labels -->
+<div class="grid grid-cols-12 px-4 font-label text-[10px] text-outline uppercase tracking-wider mb-2">
+<div class="col-span-5" style="">Player / Role</div>
+<div class="col-span-5 flex justify-between px-2">
+<span class="" style="">M1</span>
+<span class="" style="">M2</span>
+<span class="" style="">M3</span>
+</div>
+<div class="col-span-2 text-right" style="">Total</div>
+</div>
+<!-- Player Row 1 -->
+<div class="group relative overflow-hidden bg-surface-container-low hover:bg-surface-container-high transition-all rounded-xl p-4 border border-white/5">
+<div class="grid grid-cols-12 items-center">
+<div class="col-span-5 flex flex-col">
+<span class="text-sm font-bold text-on-surface truncate" style="">Travis Head</span>
+<span class="text-[10px] text-primary-dim font-bold tracking-widest uppercase" style="">SRH • BAT</span>
+</div>
+<div class="col-span-5 flex justify-between px-2 font-headline font-bold text-xs text-on-surface-variant">
+<span class="" style="">84</span>
+<span class="text-secondary" style="">--</span>
+<span class="" style="">112</span>
+</div>
+<div class="col-span-2 text-right font-headline text-lg font-extrabold text-tertiary-dim leading-none" style="">196</div>
+</div>
+</div>
+<!-- Player Row 2 -->
+<div class="group relative overflow-hidden bg-surface-container-low hover:bg-surface-container-high transition-all rounded-xl p-4 border border-white/5">
+<div class="grid grid-cols-12 items-center">
+<div class="col-span-5 flex flex-col">
+<span class="text-sm font-bold text-on-surface truncate" style="">Jasprit Bumrah</span>
+<span class="text-[10px] text-primary-dim font-bold tracking-widest uppercase" style="">MI • BOWL</span>
+</div>
+<div class="col-span-5 flex justify-between px-2 font-headline font-bold text-xs text-on-surface-variant">
+<span class="" style="">45</span>
+<span class="" style="">62</span>
+<span class="" style="">58</span>
+</div>
+<div class="col-span-2 text-right font-headline text-lg font-extrabold text-tertiary-dim leading-none" style="">165</div>
+</div>
+</div>
+<!-- Player Row 3 -->
+<div class="group relative overflow-hidden bg-surface-container-low hover:bg-surface-container-high transition-all rounded-xl p-4 border border-white/5">
+<div class="grid grid-cols-12 items-center">
+<div class="col-span-5 flex flex-col">
+<span class="text-sm font-bold text-on-surface truncate" style="">Heinrich Klaasen</span>
+<span class="text-[10px] text-primary-dim font-bold tracking-widest uppercase" style="">SRH • WK</span>
+</div>
+<div class="col-span-5 flex justify-between px-2 font-headline font-bold text-xs text-on-surface-variant">
+<span class="" style="">12</span>
+<span class="" style="">98</span>
+<span class="" style="">30</span>
+</div>
+<div class="col-span-2 text-right font-headline text-lg font-extrabold text-tertiary-dim leading-none" style="">140</div>
+</div>
+</div>
+<!-- Player Row 4 -->
+<div class="group relative overflow-hidden bg-surface-container-low hover:bg-surface-container-high transition-all rounded-xl p-4 border border-white/5">
+<div class="grid grid-cols-12 items-center">
+<div class="col-span-5 flex flex-col">
+<span class="text-sm font-bold text-on-surface truncate" style="">Ravindra Jadeja</span>
+<span class="text-[10px] text-primary-dim font-bold tracking-widest uppercase" style="">CSK • ALL</span>
+</div>
+<div class="col-span-5 flex justify-between px-2 font-headline font-bold text-xs text-on-surface-variant">
+<span class="" style="">42</span>
+<span class="" style="">21</span>
+<span class="" style="">37</span>
+</div>
+<div class="col-span-2 text-right font-headline text-lg font-extrabold text-tertiary-dim leading-none" style="">100</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-[#0b0e14]/90 backdrop-blur-2xl rounded-t-xl border-t border-white/5 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] flex justify-around items-center pt-2 pb-safe px-6 h-20">
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-white transition-all active:translate-y-[-2px] duration-300">
+<span class="material-symbols-outlined" style="">sports_cricket</span>
+<span class="font-manrope text-[10px] font-semibold uppercase tracking-widest mt-1" style="">Lobby</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-white transition-all active:translate-y-[-2px] duration-300">
+<span class="material-symbols-outlined" style="">leaderboard</span>
+<span class="font-manrope text-[10px] font-semibold uppercase tracking-widest mt-1" style="">Contests</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary relative after:content-[''] after:absolute after:-bottom-1 after:w-1 after:h-1 after:bg-primary after:rounded-full active:translate-y-[-2px] duration-300">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">groups</span>
+<span class="font-manrope text-[10px] font-semibold uppercase tracking-widest mt-1" style="">My Teams</span>
+</div>
+</nav>
+</body></html>

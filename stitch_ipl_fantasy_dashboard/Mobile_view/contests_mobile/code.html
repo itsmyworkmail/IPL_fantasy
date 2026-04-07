@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CricTrack Contests</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#fd9000",
+                    "secondary-fixed-dim": "#ffb470",
+                    "inverse-on-surface": "#52555c",
+                    "error": "#ff6e84",
+                    "on-secondary-container": "#fff6f1",
+                    "secondary-dim": "#ea8400",
+                    "surface-dim": "#0b0e14",
+                    "primary-fixed-dim": "#9c7eff",
+                    "secondary-container": "#8e4e00",
+                    "primary": "#b6a0ff",
+                    "tertiary-fixed": "#3fff8b",
+                    "primary-dim": "#7e51ff",
+                    "background": "#0b0e14",
+                    "surface": "#0b0e14",
+                    "on-background": "#ecedf6",
+                    "on-error": "#490013",
+                    "outline-variant": "#45484f",
+                    "on-secondary": "#462400",
+                    "surface-container-low": "#10131a",
+                    "on-tertiary-container": "#005d2c",
+                    "surface-tint": "#b6a0ff",
+                    "surface-container-highest": "#22262f",
+                    "inverse-surface": "#f9f9ff",
+                    "surface-bright": "#282c36",
+                    "error-dim": "#d73357",
+                    "on-tertiary-fixed": "#004820",
+                    "surface-container": "#161a21",
+                    "on-surface-variant": "#a9abb3",
+                    "on-secondary-fixed": "#512a00",
+                    "surface-variant": "#22262f",
+                    "tertiary-fixed-dim": "#24f07e",
+                    "on-secondary-fixed-variant": "#7a4300",
+                    "on-primary": "#340090",
+                    "tertiary-container": "#3fff8b",
+                    "outline": "#73757d",
+                    "surface-container-high": "#1c2028",
+                    "primary-fixed": "#a98fff",
+                    "on-surface": "#ecedf6",
+                    "secondary-fixed": "#ffc697",
+                    "on-primary-container": "#280072",
+                    "inverse-primary": "#6834eb",
+                    "on-tertiary": "#006731",
+                    "error-container": "#a70138",
+                    "tertiary": "#b5ffc2",
+                    "on-error-container": "#ffb2b9",
+                    "tertiary-dim": "#24f07e",
+                    "on-tertiary-fixed-variant": "#006832",
+                    "primary-container": "#a98fff",
+                    "surface-container-lowest": "#000000",
+                    "on-primary-fixed-variant": "#32008a",
+                    "on-primary-fixed": "#000000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body": [
+                            "Manrope"
+                    ],
+                    "label": [
+                            "Inter"
+                    ]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(182, 160, 255, 0.2);
+        }
+        .glass-panel {
+            background: rgba(34, 38, 47, 0.4);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#0b0e14]/80 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-black/40 flex justify-between items-center px-4 h-16">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full border-2 border-primary/30 overflow-hidden active:scale-95 duration-200 transition-colors hover:bg-white/5">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a young gamer with subtle neon lighting reflecting on their face" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9JsxnZyS-OV6UKOjHDIzVVxXFhprDP5GUv8ZqWjFtPjjRaGVaZ8C0KD-3ETJwV5sI8w-ohUSBNfgI1Y4UfGu7gc-gOnMJjnX25WYM50puoImLH3ESARld6kt2bt26K5SEn-tNTQK0B1L6aij8I9bRhaIVnkCh6gRpS4W44LATltrzgvXQGH9ghDjYqMsxLN5qlBaAUxkFkEJDVLUjOuzzgvJFQwasuYfefWMo6PGFbDsBr_o2-SC4EqoP-5mVXrQnWWFceiS4uA"/>
+</div>
+<span class="text-xl font-bold italic tracking-tighter text-[#b6a0ff] font-headline">CricTrack</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-[#b6a0ff] hover:bg-white/5 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</nav>
+<main class="pt-20 pb-28 px-4 max-w-md mx-auto">
+<!-- Hero Action Cards -->
+<div class="flex flex-col gap-4 mb-8">
+<div class="relative overflow-hidden group p-6 rounded-xl bg-gradient-to-br from-primary-dim to-primary/40 shadow-xl active:scale-[0.98] transition-transform">
+<div class="relative z-10">
+<h2 class="font-headline text-2xl font-bold text-white mb-1">Create Contest</h2>
+<p class="text-white/80 text-sm mb-4">Set your rules, invite your squad.</p>
+<div class="flex gap-2 w-full max-w-sm">
+<input class="bg-white/10 border-none rounded-lg text-sm font-label placeholder:text-white/40 text-white w-full focus:ring-1 focus:ring-white/30" placeholder="Enter contest name..." type="text"/>
+<button class="bg-white text-primary-dim px-4 py-2.5 rounded-lg font-bold text-sm active:scale-95 whitespace-nowrap">
+                            CREATE
+                        </button>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-white/10 text-9xl rotate-12" data-icon="add_circle">add_circle</span>
+</div>
+<div class="relative overflow-hidden group p-6 rounded-xl bg-surface-container-high border border-white/5 shadow-xl active:scale-[0.98] transition-transform">
+<div class="relative z-10">
+<h2 class="font-headline text-2xl font-bold text-on-surface mb-1">Join Private</h2>
+<p class="text-on-surface-variant text-sm mb-4">Have an invite code? Enter it here.</p>
+<div class="flex gap-2">
+<input class="bg-surface-container-highest border-none rounded-lg text-sm font-label tracking-widest text-primary w-full focus:ring-1 focus:ring-primary" placeholder="ENTER CODE" type="text"/>
+<button class="bg-primary text-on-primary px-4 py-2.5 rounded-lg font-bold text-sm active:scale-95">
+                            JOIN
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Active Contests Section -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline text-lg font-medium text-on-background">Active Contests</h3>
+<span class="bg-tertiary-dim/10 text-tertiary-dim text-[10px] font-label font-bold px-2 py-1 rounded-full border border-tertiary-dim/20">LIVE</span>
+</div>
+<!-- Segmented Control Tabs -->
+<div class="flex p-1 bg-surface-container-highest rounded-full mb-6">
+<button class="flex-1 py-2 text-xs font-label font-bold tracking-wider text-primary bg-primary/10 rounded-full shadow-inner shadow-primary/20 transition-all">ALL</button>
+<button class="flex-1 py-2 text-xs font-label font-bold tracking-wider text-on-surface-variant hover:text-on-surface transition-all">CREATED</button>
+<button class="flex-1 py-2 text-xs font-label font-bold tracking-wider text-on-surface-variant hover:text-on-surface transition-all">JOINED</button>
+</div>
+<!-- Contest Cards -->
+<div class="flex flex-col gap-4">
+<!-- Card 1 -->
+<div class="surface-container-high rounded-xl p-5 border-l-4 border-primary shadow-lg transition-colors hover:bg-surface-container-highest">
+<div class="flex justify-between items-start mb-3">
+<div>
+<span class="text-[10px] font-label text-on-surface-variant tracking-widest block mb-1">HOSTED BY ROHAN</span>
+<h4 class="font-headline text-lg font-bold text-on-surface">IPL 2026 MEGA</h4>
+</div>
+<div class="bg-primary/10 px-2 py-1 rounded border border-primary/20">
+<span class="text-[10px] font-label font-bold text-primary tracking-tighter">#CRIC882</span>
+</div>
+</div>
+<div class="flex items-end justify-between">
+<div class="flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="vibrant abstract avatar with geometric shapes in indigo and orange" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBR6Gw8kXSMj3ZoWzCo_1bvdkrLQozuV1fIOOVNkaQbguHsKuYoUsnMFuqiDPo-KnF98-9xwr1DkELpQFm8foab3Ncas1lxKzV-dvO4E0RZmh4g9Ux6HYeTj718iTPCElsoaIOCw-5U2bk8tgvkruibRanMQIW4k3rMPKBJiyjXmIcyM1nCPaQPMJtk7r-r3XfiOrloVLRlPSZ3LyX0oLD2DOx2bwiwdDn_VOenVPr6yz8O3oJKf1yyVQdFogEFINGq_C_PeQwH8A"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="vibrant abstract avatar with soft flowing organic shapes in teal and purple" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqfjkP6cfTiVbEHy1_22HrpIl5OlxykDVT3PG-PWGBA0KL7xBMLfNtn9eoOiHKtRs7T9ffYdGhHHbruerduCE82bmDSLRAkSBgTY0N5VVrvixA6Fw_MK1MCfgVHIZ-ie6flwjG778X49Q9a-GEkSlXXbtiOu8M3FafIgc3ck6XM9eirZX6PDhDpmIEKnAGKWwjjCYGuVBiWtxgDNKsjzBRKP_E9x2-VWOY5Q170PlKwcIumC7GNqOE1CFlJ93wpwB5kbtGVC_KUw"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-highest flex items-center justify-center">
+<span class="text-[8px] font-bold text-primary">+14</span>
+</div>
+</div>
+<span class="text-xs font-label text-on-surface-variant">16 Participants</span>
+</div>
+<button class="flex items-center gap-1 text-primary text-sm font-bold active:translate-x-1 duration-200">
+                            VIEW <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-high rounded-xl p-5 border-l-4 border-secondary shadow-lg transition-colors hover:bg-surface-container-highest">
+<div class="flex justify-between items-start mb-3">
+<div>
+<span class="text-[10px] font-label text-on-surface-variant tracking-widest block mb-1">HOSTED BY ADMIN</span>
+<h4 class="font-headline text-lg font-bold text-on-surface">WEEKEND BASH</h4>
+</div>
+<div class="bg-secondary/10 px-2 py-1 rounded border border-secondary/20">
+<span class="text-[10px] font-label font-bold text-secondary tracking-tighter">#BASH990</span>
+</div>
+</div>
+<div class="flex items-end justify-between">
+<div class="flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="stylized 3D avatar of a sports fan with sunglasses and a jersey" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYrG_wwVOhD3CRLhU7RM5fPOsqkcdm2n0KOeLg0Iyh9AyVL3ATUvr0KPEs_E5tnj2f1sRohPy6CDiit92-F-laj7x4JHq0Hn40lq0hHqiml5JSI1ozSuPrKwPCbGBXfg45zIzIK2_KfyqXtQMWPg3zJg_tgf2Z4eX4IyMPm1si5NJI8WQMH0FG-XvyNL2wmkVk5loMJehHb4fKPqOCjB9yEH2O7UxJk2DVJCA0GJbp0FFSWPz921oTHhTC4uWpPxGlh0E5guG0Pg"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-highest flex items-center justify-center">
+<span class="text-[8px] font-bold text-secondary">+82</span>
+</div>
+</div>
+<span class="text-xs font-label text-on-surface-variant">83 Participants</span>
+</div>
+<button class="flex items-center gap-1 text-secondary text-sm font-bold active:translate-x-1 duration-200">
+                            VIEW <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-high rounded-xl p-5 border-l-4 border-tertiary-dim shadow-lg transition-colors hover:bg-surface-container-highest">
+<div class="flex justify-between items-start mb-3">
+<div>
+<span class="text-[10px] font-label text-on-surface-variant tracking-widest block mb-1">HOSTED BY YOU</span>
+<h4 class="font-headline text-lg font-bold text-on-surface">SQUAD GOALS</h4>
+</div>
+<div class="bg-tertiary-dim/10 px-2 py-1 rounded border border-tertiary-dim/20">
+<span class="text-[10px] font-label font-bold text-tertiary-dim tracking-tighter">#SQUAD12</span>
+</div>
+</div>
+<div class="flex items-end justify-between">
+<div class="flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="minimalist profile silhouette with vibrant lime green accent light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5puRtGNNDTCvgACbELmIEZ39PUpp-6xjsnk5zdEU8wbGHcy5iCsMDe2Gq-5P6I8S4xtQFQR0RKtodmLf_wZdJABOOfrVkf6KD6gyE0iHVIzQjd1vXomc9-9xV9QDTp1ztlclVNhmSQLMbvOi-t3lVyQ2Dv7BU0OgVu3UQ8_V5VDIReiKIvNNbTQmul1nM6S0gOe7ke13YUmIZlNRXWHZ6PLjh_ORtwu2TJtVMc96a1CpZOzhzryK8O6zg1eYekE__junjrDLRIg"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-high bg-surface-container-highest flex items-center justify-center">
+<span class="text-[8px] font-bold text-tertiary-dim">+4</span>
+</div>
+</div>
+<span class="text-xs font-label text-on-surface-variant">5 Participants</span>
+</div>
+<button class="flex items-center gap-1 text-tertiary-dim text-sm font-bold active:translate-x-1 duration-200">
+                            VIEW <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-[#0b0e14]/90 backdrop-blur-2xl border-t border-white/5 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] flex justify-around items-center pt-2 pb-safe px-6 h-20">
+<div class="flex flex-col items-center justify-center text-slate-500 transition-all hover:text-white active:translate-y-[-2px] duration-300">
+<span class="material-symbols-outlined mb-1" data-icon="sports_cricket">sports_cricket</span>
+<span class="font-manrope text-[10px] font-semibold uppercase tracking-widest">Lobby</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#b6a0ff] relative after:content-[''] after:absolute after:-bottom-1 after:w-1 after:h-1 after:bg-[#b6a0ff] after:rounded-full active:translate-y-[-2px] duration-300">
+<span class="material-symbols-outlined mb-1" data-icon="leaderboard" style="font-variation-settings: 'FILL' 1;">leaderboard</span>
+<span class="font-manrope text-[10px] font-semibold uppercase tracking-widest">Contests</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 transition-all hover:text-white active:translate-y-[-2px] duration-300">
+<span class="material-symbols-outlined mb-1" data-icon="groups">groups</span>
+<span class="font-manrope text-[10px] font-semibold uppercase tracking-widest">My Teams</span>
+</div>
+</nav>
+</body></html>

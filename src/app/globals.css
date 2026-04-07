@@ -103,5 +103,17 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+
+  /* Mobile: alias for hide-scrollbar */
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Mobile My Teams: conic-gradient season progress ring.
+     Usage: style={{ '--progress-deg': `${deg}deg` } as CSSProperties}
+     The actual degree is set inline per user's point total. */
+  .circular-progress-mobile {
+    background: conic-gradient(#7e51ff var(--progress-deg, 252deg), rgba(124, 77, 255, 0.08) 0deg);
+  }
 }
+
 

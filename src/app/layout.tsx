@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
@@ -22,6 +22,17 @@ export const metadata: Metadata = {
   description:
     "Premium real-time IPL fantasy cricket points tracker. Track player stats, manage your squad, and compete in private contests with friends.",
   keywords: ["IPL", "fantasy", "cricket", "points", "tracker", "live"],
+};
+
+/**
+ * Viewport export — ensures mobile browsers render at device width.
+ * Without this, after OAuth redirects browsers default to ~980px
+ * "desktop" mode, making the md:hidden mobile shell invisible.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

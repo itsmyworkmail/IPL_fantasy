@@ -60,6 +60,11 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   // Team Viewer state
   const [viewingParticipant, setViewingParticipant] = useState<RoomParticipant | null>(null);
 
+  // Mobile tabbed management panel
+  const [mobileTab, setMobileTab] = useState<'management' | 'team'>('team');
+  // Mobile leaderboard per-row dropdown
+  const [mobileMenuOpenId, setMobileMenuOpenId] = useState<string | null>(null);
+
   // Guard against simultaneous fetchParticipants calls (focus + realtime can
   // both fire at the same time, causing the empty-error-object console spam)
   const isFetchingParticipantsRef = useRef(false);
@@ -113,85 +118,140 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
         if (myParticipantData.team_id) setSelectedGlobalTeamId(myParticipantData.team_id);
       }
     } catch (err: unknown) {
-      // Supabase errors are often plain objects — extract the most useful info
+      // AbortError is a Supabase WebSocket lock-steal artifact — swallow silently.
+      // Supabase sometimes throws a plain object (not an Error instance), so we
+      // check both instanceof and the message/name string.
+      const isAbort = (err instanceof Error && err.name === 'AbortError') ||
+        (typeof err === 'object' && err !== null && (err as Record<string, unknown>).name === 'AbortError') ||
+        (typeof err === 'string' && err.includes('AbortError'));
+      if (isAbort) return;
       const msg = err instanceof Error
         ? err.message
         : (err as { message?: string })?.message || JSON.stringify(err);
+      if (msg?.includes('AbortError')) return; // extra safety net
       console.error('Failed to fetch participants:', msg, err);
+
     } finally {
       isFetchingParticipantsRef.current = false;
       if (!isBackground) setLoadingMembers(false);
     }
   }, [roomId, user?.id]);
+  //
+  // Root cause of "cannot add postgres_changes after subscribe()":
+  //   supabase.channel(NAME) returns the SAME object if called with the same
+  //   name while it's still in SUBSCRIBED state. supabase.removeChannel() is
+  //   async, so React Strict Mode's cleanup → remount cycle ends up calling
+  //   .on() on the already-subscribed channel object.
+  //
+  // Fix:
+  //   1. Call channel.unsubscribe() synchronously in cleanup so Supabase
+  //      immediately marks the channel as closed.
+  //   2. Use a unique name per mount (via a counter ref) so even if Supabase's
+  //      internal registry hasn't fully cleared, the new mount gets a fresh
+  //      channel object rather than the stale subscribed one.
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const mountCountRef = useRef(0);
+  const fetchRoomRef = useRef(fetchRoom);
+  const fetchParticipantsRef = useRef(fetchParticipants);
+  const patchActiveRoomRef = useRef(patchActiveRoom);
 
-  // Initial Fetch & Real-time Subscriptions - FIX: Direct Payload Map No-Fetches
+  useEffect(() => { fetchRoomRef.current = fetchRoom; }, [fetchRoom]);
+  useEffect(() => { fetchParticipantsRef.current = fetchParticipants; }, [fetchParticipants]);
+  useEffect(() => { patchActiveRoomRef.current = patchActiveRoom; }, [patchActiveRoom]);
+
   useEffect(() => {
-    if (user?.id && roomId) {
-      fetchRoom(roomId);
-      fetchParticipants();
+    if (!user?.id || !roomId) return;
 
-      const channel = supabase
-        .channel(`room_${roomId}_sync`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'room_participants', filter: `room_id=eq.${roomId}` }, (payload) => {
-          setParticipants(prev => {
-            const uniqueMap = new Map<string, RoomParticipant>();
-            prev.forEach(p => uniqueMap.set(String(p.id), p));
+    // ─── Bulletproof stale-channel purge ────────────────────────────────────
+    // Problem: supabase is a module-level singleton — it survives HMR resets,
+    // React Strict Mode double-invokes, and App Router reconnectPassiveEffects.
+    // useRef values do NOT survive all of these. So we cannot rely on a ref to
+    // know whether a channel already exists — we must ask Supabase directly.
+    //
+    // Before creating any new channel, destroy every stale channel for this
+    // room that Supabase still knows about. This handles:
+    //   • Strict Mode: cleanup ran → channel removed → nothing to purge
+    //   • reconnectPassiveEffects: cleanup did NOT run → stale found & killed
+    //   • HMR: mountCountRef reset, old _sync_N channel still in registry
+    supabase
+      .getChannels()
+      .filter(ch => ch.topic.includes(roomId))
+      .forEach(ch => supabase.removeChannel(ch));
+    // ────────────────────────────────────────────────────────────────────────
 
-            const pid = String(payload.new.id);
-            if (uniqueMap.has(pid)) {
-              const existing = uniqueMap.get(pid)!;
-              if (payload.new.updated_at && existing.updated_at) {
-                if (new Date(String(payload.new.updated_at)) <= new Date(existing.updated_at)) return prev;
-              }
-              uniqueMap.set(pid, { ...existing, ...payload.new, id: pid } as unknown as RoomParticipant);
+    // Initial data load
+    fetchRoomRef.current(roomId);
+    fetchParticipantsRef.current();
+
+    // Date.now() guarantees uniqueness even if mountCountRef is reset by HMR
+    const channelName = `room_${roomId}_sync_${Date.now()}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'room_participants', filter: `room_id=eq.${roomId}` }, (payload) => {
+        setParticipants(prev => {
+          const uniqueMap = new Map<string, RoomParticipant>();
+          prev.forEach(p => uniqueMap.set(String(p.id), p));
+          const pid = String(payload.new.id);
+          if (uniqueMap.has(pid)) {
+            const existing = uniqueMap.get(pid)!;
+            if (payload.new.updated_at && existing.updated_at) {
+              if (new Date(String(payload.new.updated_at)) <= new Date(existing.updated_at)) return prev;
             }
-            return Array.from(uniqueMap.values());
-          });
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_participants', filter: `room_id=eq.${roomId}` }, async (payload) => {
-          // ONLY fetch what is absolutely missing: the new friend's profile
-          const { data } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.profile_id).single();
-          setParticipants(prev => {
-            const uniqueMap = new Map<string, RoomParticipant>();
-            prev.forEach(p => uniqueMap.set(String(p.id), p));
-
-            const pid = String(payload.new.id);
-            if (!uniqueMap.has(pid)) {
-              uniqueMap.set(pid, { ...(payload.new as Record<string, unknown>), profiles: data, name: 'Unassigned Squad', locked_squad: (payload.new.locked_squad as number[]) || [], selected_players: [], id: pid } as unknown as RoomParticipant);
+            uniqueMap.set(pid, { ...existing, ...payload.new, id: pid } as unknown as RoomParticipant);
+          }
+          return Array.from(uniqueMap.values());
+        });
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_participants', filter: `room_id=eq.${roomId}` }, async (payload) => {
+        const { data } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.profile_id).single();
+        setParticipants(prev => {
+          const uniqueMap = new Map<string, RoomParticipant>();
+          prev.forEach(p => uniqueMap.set(String(p.id), p));
+          const pid = String(payload.new.id);
+          if (!uniqueMap.has(pid)) {
+            uniqueMap.set(pid, { ...(payload.new as Record<string, unknown>), profiles: data, name: 'Unassigned Squad', locked_squad: (payload.new.locked_squad as number[]) || [], selected_players: [], id: pid } as unknown as RoomParticipant);
+          }
+          return Array.from(uniqueMap.values());
+        });
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'room_participants', filter: `room_id=eq.${roomId}` }, (payload) => {
+        setParticipants(prev => {
+          const uniqueMap = new Map<string, RoomParticipant>();
+          prev.forEach(p => uniqueMap.set(String(p.id), p));
+          uniqueMap.delete(String(payload.old.id));
+          return Array.from(uniqueMap.values());
+        });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, (payload) => {
+        setParticipants(prev => {
+          const uniqueMap = new Map<string, RoomParticipant>();
+          prev.forEach(p => uniqueMap.set(String(p.id), p));
+          const targetId = String(payload.new.id);
+          uniqueMap.forEach((p, key) => {
+            if (String(p.team_id) === targetId) {
+              uniqueMap.set(key, { ...p, name: payload.new.name, selected_players: payload.new.selected_players });
             }
-            return Array.from(uniqueMap.values());
           });
-        })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'room_participants', filter: `room_id=eq.${roomId}` }, (payload) => {
-          setParticipants(prev => {
-            const uniqueMap = new Map<string, RoomParticipant>();
-            prev.forEach(p => uniqueMap.set(String(p.id), p));
-            uniqueMap.delete(String(payload.old.id));
-            return Array.from(uniqueMap.values());
-          });
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, (payload) => {
-          // Direct mapping from user's global edits into the Room context mapping!
-          setParticipants(prev => {
-            const uniqueMap = new Map<string, RoomParticipant>();
-            prev.forEach(p => uniqueMap.set(String(p.id), p));
-            const targetId = String(payload.new.id);
-            uniqueMap.forEach((p, key) => {
-              if (String(p.team_id) === targetId) {
-                uniqueMap.set(key, { ...p, name: payload.new.name, selected_players: payload.new.selected_players });
-              }
-            });
-            return Array.from(uniqueMap.values());
-          });
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
-          patchActiveRoom(payload.new);
-        })
-        .subscribe();
+          return Array.from(uniqueMap.values());
+        });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
+        patchActiveRoomRef.current(payload.new);
+      })
+      .subscribe();
 
-      return () => { supabase.removeChannel(channel); };
-    }
-  }, [user?.id, roomId, fetchRoom, fetchParticipants, patchActiveRoom]);
+    channelRef.current = channel;
+
+    return () => {
+      // removeChannel() internally calls unsubscribe() — one call, clean teardown.
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, roomId]);
+
+
 
   // Tab focus fallback resync (Safety check against drift)
   useEffect(() => {
@@ -373,385 +433,552 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   const dropdownsFrozen = !isModifyTeams || (!isHost && isLockRoom);
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <>
+      {/* ─────────────────────────── MOBILE LAYOUT ─────────────────────────── */}
+      <div className="md:hidden space-y-4 px-4">
 
-      {/* Header Section */}
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-3">
-          <nav className="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase items-center">
-            <span>Contests</span>
-            <span>/</span>
-            <span className="text-indigo-400">{isShellLoading ? '...' : activeRoom?.name}</span>
-          </nav>
-          {isShellLoading ? (
-            <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
-          ) : !isHost ? (
-            <button onClick={handleLeave} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
-              <LogOut size={14} strokeWidth={2.5} /> Leave Contest
-            </button>
-          ) : (
-            <button onClick={handleDeleteContest} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
-              <Trash2 size={14} strokeWidth={2.5} /> Delete Contest
-            </button>
-          )}
-        </div>
-
-        <div className="flex justify-between items-start gap-12">
-          <div className="flex-grow group">
-            <div className="flex items-center gap-3">
-              {isShellLoading ? (
-                <div className="h-12 w-64 bg-white/5 rounded-xl animate-pulse mt-1" />
-              ) : isEditingTitle && isHost ? (
-                <input
-                  autoFocus
-                  className="bg-surface-container-low text-5xl font-black font-headline text-on-surface leading-tight w-full outline-none border-b-2 border-primary border-dashed"
-                  value={editTitleBuffer}
-                  onChange={e => setEditTitleBuffer(e.target.value)}
-                  onBlur={handleTitleSubmit}
-                  onKeyDown={e => e.key === 'Enter' && handleTitleSubmit()}
-                />
-              ) : (
-                <h2
-                  onDoubleClick={() => isHost && setIsEditingTitle(true)}
-                  className={`text-5xl font-black font-headline text-on-surface leading-tight ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
-                  title={isHost ? "Double click to rename" : ""}
-                >
-                  {activeRoom?.name}
-                </h2>
-              )}
-              {isHost && (
-                <button onClick={() => {
-                  if (isEditingTitle) handleTitleSubmit();
-                  else setIsEditingTitle(true);
-                }}
-                  className={`p-2 rounded-full transition-all flexitems-center gap-2 text-xs font-bold uppercase tracking-widest ${isEditingTitle ? 'bg-primary text-on-primary hover:bg-primary/90' : 'text-primary bg-primary/10 hover:bg-primary/20 opacity-0 group-hover:opacity-100'}`}>
-                  {isEditingTitle ? <Check size={16} strokeWidth={2.5} /> : <span className="flex items-center gap-2"><Pen size={14} strokeWidth={2.5} /> Edit</span>}
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              {isEditingDesc && isHost ? (
-                <input
-                  autoFocus
-                  className="bg-surface-container-low text-on-surface-variant mt-2 w-full max-w-lg outline-none border-b border-primary/50 border-dashed"
-                  value={editDescBuffer}
-                  onChange={e => setEditDescBuffer(e.target.value)}
-                  onBlur={handleDescSubmit}
-                  onKeyDown={e => e.key === 'Enter' && handleDescSubmit()}
-                />
-              ) : (
-                <p
-                  onDoubleClick={() => isHost && setIsEditingDesc(true)}
-                  className={`text-on-surface-variant mt-2 max-w-lg ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}
-                  title={isHost ? "Double click to rename" : ""}
-                >
-                  {activeRoom?.description || 'A single line description about anything'}
+        {viewingParticipant ? (
+          /* Mobile Team Detail View */
+          <div className="bg-surface-container-low rounded-2xl border border-white/5">
+            {/* Compact mobile header */}
+            <div className="px-4 py-4 border-b border-white/5 flex items-center gap-3"
+              style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.10) 0%,transparent 100%)' }}>
+              <button onClick={() => setViewingParticipant(null)}
+                className="p-2 rounded-full bg-white/5 text-indigo-400 active:scale-95 transition-transform flex-shrink-0">
+                <ArrowLeft size={16} strokeWidth={2.5} />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-white text-sm font-headline truncate">
+                  {viewingParticipant.profiles?.display_name || 'Manager'}
                 </p>
-              )}
-              {isHost && (
-                <button onClick={() => {
-                  if (isEditingDesc) handleDescSubmit();
-                  else setIsEditingDesc(true);
-                }}
-                  className={`mt-2 p-1.5 rounded text-xs font-bold uppercase tracking-widest transition-all ${isEditingDesc ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'text-outline hover:text-primary opacity-0 group-hover:opacity-100'}`}>
-                  {isEditingDesc ? <Check size={14} strokeWidth={2.5} /> : <Pen size={12} strokeWidth={2.5} />}
-                </button>
+                <p className="text-[9px] text-slate-500 truncate">{viewingParticipant.name || 'Unassigned Squad'}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-2xl font-black font-headline" style={{ color: '#c084fc' }}>
+                  {(viewingParticipant as RoomParticipant & { score?: number }).score ?? 0}
+                </p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">PTS</p>
+              </div>
+            </div>
+            {/* Switch team dropdown */}
+            <div className="px-4 py-2 border-b border-white/5 overflow-x-auto hide-scrollbar">
+              <div className="flex gap-2">
+                {participantsWithScores.map(p => (
+                  <button key={p.id} onClick={() => setViewingParticipant(p)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold transition-all active:scale-95 ${p.id === viewingParticipant.id ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/5 text-slate-400 border border-white/5'}`}>
+                    {p.profiles?.display_name || 'Manager'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Squad table — compact mobile format (no duplicate header) */}
+            <TeamDetailView
+              participant={viewingParticipant}
+              allParticipants={participantsWithScores}
+              players={players}
+              isModifyTeams={isModifyTeams}
+              onBack={() => setViewingParticipant(null)}
+              onSwitch={(p) => setViewingParticipant(p)}
+              mobileView
+            />
+          </div>
+        ) : (
+          <>
+            {/* ── Contest Header Card ── */}
+            <div className="relative overflow-hidden rounded-2xl bg-surface-container-high p-4 border border-white/5">
+              <div className="flex justify-between items-center mb-3">
+                {isShellLoading ? (
+                  <div className="h-5 w-20 bg-white/5 rounded-full animate-pulse" />
+                ) : (
+                  <span className="text-[10px] font-black text-tertiary bg-tertiary/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    {participantsWithScores.length} Teams
+                  </span>
+                )}
+                {isShellLoading ? (
+                  <div className="h-7 w-28 bg-white/5 rounded-lg animate-pulse" />
+                ) : (
+                  <button
+                    onClick={() => navigator.clipboard.writeText(activeRoom?.invite_code || '').then(() => toast.success('Code copied!'))}
+                    className="flex items-center gap-2 bg-surface-container-highest/60 rounded-lg py-1.5 px-2.5 border border-white/10 active:scale-95 transition-transform">
+                    <span className="text-[8px] font-bold text-outline uppercase tracking-wider">CODE</span>
+                    <span className="text-primary font-headline font-bold text-[11px] tracking-widest">{activeRoom?.invite_code}</span>
+                    <Copy size={13} className="text-primary opacity-70" />
+                  </button>
+                )}
+              </div>
+              {isShellLoading ? (
+                <div className="space-y-2">
+                  <div className="h-6 w-48 bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-36 bg-white/5 rounded animate-pulse" />
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <h2 className="font-headline text-xl font-extrabold text-on-background leading-tight">{activeRoom?.name}</h2>
+                  <p className="text-on-surface-variant text-xs">{activeRoom?.description || ''}</p>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="shrink-0 pt-2">
-            {isShellLoading ? (
-              <div className="h-12 w-32 bg-white/5 rounded-lg animate-pulse" />
-            ) : (
-              <div className="bg-surface-container-high/50 border border-white/5 px-3 py-1 rounded-lg flex items-center gap-5 backdrop-blur-sm group hover:border-indigo-500/30 transition-all">
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1">Invite Code</span>
-                  <span className="font-mono text-sm font-bold text-on-surface text-left">{activeRoom?.invite_code}</span>
+            {/* ── Leaderboard ── */}
+            <section className="flex flex-col">
+              <div className="flex items-center justify-between mb-2 px-1 border-b border-white/5 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-primary text-xl">📊</span>
+                  <h3 className="font-headline text-sm font-bold text-on-background uppercase tracking-tight">Leaderboard</h3>
                 </div>
-                <button onClick={() => navigator.clipboard.writeText(activeRoom?.invite_code || '')} className="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors" title="Copy Code">
-                  <Copy size={16} strokeWidth={2.5} />
+              </div>
+
+              {/* Scrollable leaderboard — fixed height shows ~7 rows */}
+              <div className="space-y-1.5 overflow-y-auto hide-scrollbar pr-1" style={{ maxHeight: '406px' }}>
+                {loadingMembers ? (
+                  [...Array(5)].map((_, i) => (
+                    <div key={i} className="bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border border-white/5 animate-pulse">
+                      <div className="w-6 h-4 bg-white/5 rounded" />
+                      <div className="w-10 h-10 rounded-lg bg-white/5 flex-shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 w-28 bg-white/5 rounded" />
+                        <div className="h-2 w-16 bg-white/5 rounded" />
+                      </div>
+                      <div className="h-4 w-12 bg-white/5 rounded" />
+                    </div>
+                  ))
+                ) : participantsWithScores.length === 0 ? (
+                  <p className="text-center text-slate-500 py-8 text-sm">No teams have joined yet.</p>
+                ) : (
+                  participantsWithScores.map((p, idx) => {
+                    const isMe = user && p.profile_id === user.id;
+                    const avatarColors = ['bg-primary/20 text-primary','bg-orange-500/10 text-orange-400','bg-emerald-500/10 text-emerald-400','bg-rose-500/10 text-rose-400'];
+                    const aClass = avatarColors[idx % 4];
+                    const menuOpen = mobileMenuOpenId === p.id;
+                    return (
+                      <div key={p.id} className={`relative bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border transition-colors active:bg-white/10 ${isMe ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-white/5'}`}
+                        onClick={() => { setViewingParticipant(participantsWithScores.find(ps => ps.id === p.id) || null); }}>
+                        {/* Rank */}
+                        <div className="w-6 text-center font-headline font-bold text-xs flex-shrink-0" style={{ color: idx === 0 && p.score > 0 ? '#fd9000' : '#73757d' }}>
+                          {idx === 0 && p.score > 0 ? '👑' : idx + 1}
+                        </div>
+                        {/* Avatar */}
+                        {p.ipl_team ? (
+                          <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden border border-white/10 p-1 flex-shrink-0">
+                            <img src={`/logos/${p.ipl_team.toLowerCase()}.png`} alt={p.ipl_team} width={32} height={32}
+                              className="object-contain w-full h-full"
+                              onError={(e) => { e.currentTarget.style.display='none'; const f = e.currentTarget.nextElementSibling as HTMLElement|null; if(f) f.style.display='flex'; }} />
+                            <div style={{display:'none'}} className={`w-full h-full flex justify-center items-center font-bold text-[9px] uppercase ${aClass}`}>{p.ipl_team.substring(0,3)}</div>
+                          </div>
+                        ) : (
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[9px] uppercase flex-shrink-0 ${aClass}`}>
+                            {(p.name||'?').split(' ').map((n:string)=>n[0]).join('').substring(0,2)}
+                          </div>
+                        )}
+                        {/* Name */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-headline font-bold text-on-surface text-xs truncate flex items-center gap-1">
+                            {p.profiles?.display_name || 'Manager'}
+                            {isMe && <span className="text-[7px] px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold uppercase">You</span>}
+                          </h4>
+                          <p className="text-[9px] text-outline uppercase truncate">{IPL_FRANCHISES.find(f=>f.id===p.ipl_team)?.name || 'Unassigned'}</p>
+                        </div>
+                        {/* Score */}
+                        <div className="text-right flex-shrink-0" onClick={e => e.stopPropagation()}>
+                          <p className="font-headline font-extrabold text-sm text-tertiary">{p.score}</p>
+                          <p className="text-[8px] text-outline uppercase">Pts</p>
+                        </div>
+                        {/* More options */}
+                        {isHost && (
+                          <button className="p-1 text-outline flex-shrink-0" onClick={e => { e.stopPropagation(); setMobileMenuOpenId(menuOpen ? null : p.id); }}>
+                            <MoreVertical size={16} />
+                          </button>
+                        )}
+                        {menuOpen && isHost && (
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-surface-container-high border border-white/10 rounded-xl shadow-2xl py-1 min-w-[120px]" onClick={e=>e.stopPropagation()}>
+                            <button onClick={() => { setViewingParticipant(participantsWithScores.find(ps=>ps.id===p.id)||null); setMobileMenuOpenId(null); }}
+                              className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2">
+                              <Eye size={12} /> View Team
+                            </button>
+                            {!isMe && (
+                              <button onClick={() => { handleKick(p.profile_id); setMobileMenuOpenId(null); }}
+                                className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5">
+                                <UserMinus size={12} /> Remove
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            {/* ── Tabbed Management ── */}
+            <section>
+              <div className="flex bg-surface-container-highest/30 p-1 rounded-xl mb-3 border border-white/5">
+                {isHost && (
+                  <button
+                    onClick={() => setMobileTab('management')}
+                    className={`flex-1 py-2 text-xs font-headline transition-all rounded-lg ${mobileTab === 'management' ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20' : 'text-outline-variant font-medium'}`}>
+                    Contest Management
+                  </button>
+                )}
+                <button
+                  onClick={() => setMobileTab('team')}
+                  className={`flex-1 py-2 text-xs font-headline transition-all rounded-lg ${mobileTab === 'team' ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20' : 'text-outline-variant font-medium'}`}>
+                  Manage Team
                 </button>
               </div>
-            )}
-          </div>
-        </div>
+
+              {/* Contest Management tab */}
+              {mobileTab === 'management' && isHost && (
+                <div className="bg-surface-container rounded-xl divide-y divide-white/5 overflow-hidden border border-white/5">
+                  {[
+                    { icon: <Lock size={18} className="text-primary" />, label: 'Lock Room', sub: 'Prevent new entries', active: isLockRoom, toggle: toggleLockRoom },
+                    { icon: <Pen size={18} className="text-secondary" />, label: 'Modify teams', sub: 'Allow roster changes', active: isModifyTeamsRaw, toggle: toggleModifyTeams },
+                    { icon: <Copy size={18} className="text-tertiary" />, label: 'Allow Duplicates', sub: 'Identical rosters', active: allowDuplicates, toggle: toggleAllowDuplicates },
+                  ].map(({ icon, label, sub, active, toggle }) => (
+                    <div key={label} className="px-4 py-3.5 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {icon}
+                        <div>
+                          <p className="font-headline font-bold text-xs">{label}</p>
+                          <p className="text-[10px] text-outline">{sub}</p>
+                        </div>
+                      </div>
+                      <button onClick={toggle}
+                        className={`w-10 h-5 rounded-full relative transition-all flex-shrink-0 ${active ? 'bg-primary' : 'bg-surface-container-highest'}`}>
+                        <div className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white transition-all ${active ? 'right-[3px]' : 'left-[3px]'}`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Manage Team tab */}
+              {mobileTab === 'team' && (
+                <div className={`bg-surface-container rounded-xl p-4 border border-white/5 space-y-4 ${dropdownsFrozen ? 'opacity-75' : ''}`}>
+                  {dropdownsFrozen && (
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-outline uppercase tracking-widest">
+                      <Lock size={10} strokeWidth={3} /> Locked by admin
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <label className="text-[9px] font-bold text-outline uppercase mb-1.5 block ml-1 tracking-wider">User Team</label>
+                      <select disabled={dropdownsFrozen} value={selectedGlobalTeamId}
+                        onChange={e => { setSelectedGlobalTeamId(e.target.value); if (selectedIplTeam && e.target.value) handleTeamMappingUpdate(e.target.value, selectedIplTeam); }}
+                        className="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold disabled:cursor-not-allowed">
+                        <option value="">Select your team</option>
+                        {myGlobalTeams.map(t => {
+                          const hasDupes = !allowDuplicates && containsDuplicates(t.selected_players);
+                          return <option key={t.id} value={t.id} disabled={hasDupes}>{t.name}{hasDupes ? ' (Dupes)' : ''}</option>;
+                        })}
+                      </select>
+                      <div className="absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 pointer-events-none text-outline">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <label className="text-[9px] font-bold text-outline uppercase mb-1.5 block ml-1 tracking-wider">IPL Franchise</label>
+                      <select disabled={dropdownsFrozen} value={selectedIplTeam}
+                        onChange={e => { setSelectedIplTeam(e.target.value); if (selectedGlobalTeamId && e.target.value) handleTeamMappingUpdate(selectedGlobalTeamId, e.target.value); }}
+                        className="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold disabled:cursor-not-allowed">
+                        <option value="">Choose an IPL team</option>
+                        {IPL_FRANCHISES.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                      <div className="absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 pointer-events-none text-outline">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={handleManualUpdate} disabled={dropdownsFrozen}
+                    className="w-full bg-primary text-on-primary py-3.5 rounded-lg font-headline font-extrabold text-[11px] uppercase tracking-widest active:scale-95 transition-transform shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed">
+                    Update Team Selection
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* ── Danger Zone ── */}
+            <button
+              onClick={isHost ? handleDeleteContest : handleLeave}
+              className="w-full py-4 rounded-xl border border-error/30 text-error font-headline font-extrabold text-[11px] uppercase tracking-[0.2em] active:bg-error/10 transition-colors flex items-center justify-center gap-2">
+              <Trash2 size={14} />
+              {isHost ? 'Dissolve Contest Room' : 'Leave Contest'}
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Full-body conditional: Team Detail OR normal Bento Layout */}
-      {viewingParticipant ? (
-        <TeamDetailView
-          participant={viewingParticipant}
-          allParticipants={participantsWithScores}
-          players={players}
-          isModifyTeams={isModifyTeams}
-          onBack={() => setViewingParticipant(null)}
-          onSwitch={(p) => setViewingParticipant(p)}
-        />
-      ) : (
-        <div className="grid grid-cols-12 gap-6">
+      {/* ─────────────────────────── DESKTOP LAYOUT ─────────────────────────── */}
+      <div className="hidden md:block max-w-7xl mx-auto w-full">
 
-          {/* Left Column: Leaderboard */}
-          <div className="col-span-12 lg:col-span-8 order-2 lg:order-1">
-            <div className="bg-surface-container-low rounded-2xl min-h-[500px] flex flex-col border border-white/5">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                <div>
-                  <h3 className="text-2xl mb-2 font-bold font-headline text-on-surface">Leaderboard</h3>
-                  <p className="text-sm text-on-surface-variant">Total Teams: {participantsWithScores.length}</p>
-                </div>
-              </div>
-
-              <div className="w-full">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-surface-container-lowest/50">
-                    <tr>
-                      <th className="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest">pos</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest">teams</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest">Points</th>
-                      <th className="px-8 py-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5 relative">
-                    {loadingMembers ? (
-                      [...Array(5)].map((_, i) => (
-                        <tr key={i} className="animate-pulse">
-                          <td className="px-8 py-6"><div className="h-4 w-4 bg-white/5 rounded" /></td>
-                          <td className="px-8 py-6">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-lg bg-white/5" />
-                              <div className="space-y-2">
-                                <div className="h-4 w-32 bg-white/5 rounded" />
-                                <div className="h-3 w-24 bg-white/5 rounded" />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6"><div className="h-4 w-12 bg-white/5 rounded" /></td>
-                          <td className="px-8 py-6"><div className="h-4 w-8 bg-white/5 rounded ml-auto" /></td>
-                        </tr>
-                      ))
-                    ) : participantsWithScores.length === 0 ? (
-                      <tr><td colSpan={4} className="p-8 text-center text-slate-500">No teams have joined yet.</td></tr>
-                    ) : (
-                      participantsWithScores.map((p, idx) => {
-                        const isMe = user && p.profile_id === user.id;
-
-                        const avatarColors = [
-                          'bg-primary/20 text-primary',
-                          'bg-orange-500/10 text-orange-400',
-                          'bg-emerald-500/10 text-emerald-400',
-                          'bg-rose-500/10 text-rose-400'
-                        ];
-                        const aClass = avatarColors[idx % 4];
-
-                        return (
-                          <tr key={p.id} className={`transition-colors group ${isMe ? 'bg-indigo-500/[0.08] ring-1 ring-inset ring-indigo-500/20 hover:bg-indigo-500/[0.12]' : 'hover:bg-white/5'}`}>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-1">
-                                {idx === 0 && p.score > 0 && <Crown size={14} className="text-tertiary mr-1 fill-tertiary/20" strokeWidth={2.5} />}
-                                <span className="text-on-surface font-semibold">{idx + 1}</span>
-                              </div>
-                            </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-4">
-                                {p.ipl_team ? (
-                                  <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white/5 border border-white/10 p-1">
-                                    {/* Plain <img> avoids Next.js image optimizer pipeline — static PNGs in /public/logos/ serve directly */}
-                                    <img
-                                      src={`/logos/${p.ipl_team.toLowerCase()}.png`}
-                                      alt={p.ipl_team}
-                                      width={40}
-                                      height={40}
-                                      className="object-contain w-full h-full drop-shadow"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                                        if (fallback) fallback.style.display = 'flex';
-                                      }}
-                                    />
-                                    <div style={{ display: 'none' }} className={`w-full h-full flex justify-center items-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>{p.ipl_team.substring(0, 3)}</div>
-                                  </div>
-                                ) : (
-                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>
-                                    {(p.name || 'Unassigned').split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="font-bold text-on-surface flex items-center gap-2">
-                                    {p.profiles?.display_name || 'Manager'}
-                                    {activeRoom && p.profile_id === activeRoom.creator_id && <span className="text-[9px] px-1.5 py-0.5 rounded bg-tertiary/20 text-tertiary font-bold uppercase tracking-widest">Host</span>}
-                                    {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold uppercase tracking-widest">You</span>}
-                                  </p>
-                                  <p className="text-xs text-on-surface-variant line-clamp-1">{p.ipl_team ? IPL_FRANCHISES.find(f => f.id === p.ipl_team)?.name : 'Unassigned Franchise'}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-8 py-6 text-tertiary font-medium">{p.score}</td>
-                            <td className="px-8 py-6 text-right relative">
-                              {/* Admin dropdown mapping */}
-                              <div className="group/menu relative inline-block text-left">
-                                <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline">
-                                  <MoreVertical size={20} />
-                                </button>
-                                <div className="hidden group-hover/menu:block absolute right-0 top-full w-48 rounded-md shadow-lg bg-surface-container-high ring-1 ring-black ring-opacity-5 z-50">
-                                  <div className="py-1" role="menu">
-                                    <button
-                                      onClick={() => {
-                                        const targetParticipant = participantsWithScores.find(ps => ps.id === p.id) || null;
-                                        setViewingParticipant(targetParticipant);
-                                      }}
-                                      className="text-sm font-medium text-on-surface hover:bg-white/5 block w-full text-left px-4 py-2 flex items-center gap-2"
-                                    >
-                                      <Eye size={16} strokeWidth={2.5} /> View team
-                                    </button>
-                                    {isHost && !isMe && (
-                                      <button onClick={() => handleKick(p.profile_id)} className="text-sm font-bold text-error hover:bg-error/10 block w-full text-left px-4 py-2 flex items-center gap-2">
-                                        <UserMinus size={16} strokeWidth={2.5} /> Remove
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        {/* Desktop Header */}
+        <div className="mb-12">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <nav className="flex gap-2 text-xs font-bold text-indigo-400/60 tracking-widest uppercase items-center">
+              <span>Contests</span><span>/</span>
+              <span className="text-indigo-400">{isShellLoading ? '...' : activeRoom?.name}</span>
+            </nav>
+            {isShellLoading ? (
+              <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
+            ) : !isHost ? (
+              <button onClick={handleLeave} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
+                <LogOut size={14} strokeWidth={2.5} /> Leave Contest
+              </button>
+            ) : (
+              <button onClick={handleDeleteContest} className="text-[10px] font-bold text-error/80 hover:text-error uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 bg-error/5 rounded-md border border-error/20 transition-all">
+                <Trash2 size={14} strokeWidth={2.5} /> Delete Contest
+              </button>
+            )}
           </div>
 
-          {/* Right Column: Management & Settings */}
-          <div className="col-span-12 lg:col-span-4 space-y-6 order-1 lg:order-2">
-
-            {/* Manage Team Section */}
-            <div className={`bg-surface-container-low p-6 rounded-2xl border border-white/5 transition-all ${dropdownsFrozen ? 'opacity-75' : ''}`}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-bold text-on-surface uppercase tracking-widest flex items-center gap-2">
-                  Manage Team
-                  {dropdownsFrozen && <Lock size={12} className="text-outline" strokeWidth={3} />}
-                </h3>
-                <button
-                  onClick={handleManualUpdate}
-                  disabled={dropdownsFrozen}
-                  title={dropdownsFrozen ? 'Team modifications are locked' : 'Update team selection'}
-                  className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-primary text-on-primary px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary"
-                >
-                  Update
-                </button>
+          <div className="flex justify-between items-start gap-12">
+            <div className="flex-grow group">
+              <div className="flex items-center gap-3">
+                {isShellLoading ? (
+                  <div className="h-12 w-64 bg-white/5 rounded-xl animate-pulse mt-1" />
+                ) : isEditingTitle && isHost ? (
+                  <input autoFocus
+                    className="bg-surface-container-low text-5xl font-black font-headline text-on-surface leading-tight w-full outline-none border-b-2 border-primary border-dashed"
+                    value={editTitleBuffer} onChange={e => setEditTitleBuffer(e.target.value)}
+                    onBlur={handleTitleSubmit} onKeyDown={e => e.key === 'Enter' && handleTitleSubmit()} />
+                ) : (
+                  <h2 onDoubleClick={() => isHost && setIsEditingTitle(true)}
+                    className={`text-5xl font-black font-headline text-on-surface leading-tight ${isHost ? 'cursor-text hover:text-indigo-300 transition-colors' : ''}`}>
+                    {activeRoom?.name}
+                  </h2>
+                )}
+                {isHost && (
+                  <button onClick={() => { if (isEditingTitle) handleTitleSubmit(); else setIsEditingTitle(true); }}
+                    className={`p-2 rounded-full transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${isEditingTitle ? 'bg-primary text-on-primary' : 'text-primary bg-primary/10 hover:bg-primary/20 opacity-0 group-hover:opacity-100'}`}>
+                    {isEditingTitle ? <Check size={16} strokeWidth={2.5} /> : <Pen size={14} strokeWidth={2.5} />}
+                  </button>
+                )}
               </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest">Choose Team</label>
-                  <div className="relative group">
-                    <select
-                      disabled={dropdownsFrozen}
-                      value={selectedGlobalTeamId}
-                      onChange={(e) => {
-                        setSelectedGlobalTeamId(e.target.value);
-                        if (selectedIplTeam && e.target.value) {
-                          handleTeamMappingUpdate(e.target.value, selectedIplTeam);
-                        }
-                      }}
-                      className="w-full bg-surface-container-lowest border border-white/10 rounded-lg py-3 px-4 text-sm font-medium text-on-surface appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer disabled:cursor-not-allowed">
-                      <option value="">Select your team</option>
-                      {myGlobalTeams.map(t => {
-                        const hasDupes = !allowDuplicates && containsDuplicates(t.selected_players);
-                        return (
-                          <option key={t.id} value={t.id} disabled={hasDupes}>
-                            {t.name} {hasDupes ? '(Includes Dupes)' : ''}
-                          </option>
-                        )
-                      })}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
-                      <ChevronDown size={16} strokeWidth={2.5} />
-                    </div>
-                  </div>
-                  {!allowDuplicates && <p className="text-[10px] w-full text-error/80 uppercase font-bold tracking-widest transition-all">No Duplicates Mode ENFORCED</p>}
-                  {dropdownsFrozen && <p className="text-[10px] w-full text-outline uppercase font-bold tracking-widest mt-1">LOCKED BY ADMIN</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest">Select IPL Team</label>
-                  <div className="relative group">
-                    <select
-                      disabled={dropdownsFrozen}
-                      value={selectedIplTeam}
-                      onChange={(e) => {
-                        setSelectedIplTeam(e.target.value);
-                        if (selectedGlobalTeamId && e.target.value) {
-                          handleTeamMappingUpdate(selectedGlobalTeamId, e.target.value);
-                        }
-                      }}
-                      className="w-full bg-surface-container-lowest border border-white/10 rounded-lg py-3 px-4 text-sm font-medium text-on-surface appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer disabled:cursor-not-allowed">
-                      <option value="">Choose an IPL team</option>
-                      {IPL_FRANCHISES.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
-                      <ChevronDown size={16} strokeWidth={2.5} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <p className="text-on-surface-variant mt-2 max-w-lg text-sm">{activeRoom?.description || ''}</p>
             </div>
 
-            {/* Creator Controls */}
-            {isHost && (
-              <div className="bg-surface-container-low p-6 rounded-2xl border border-white/5">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-sm font-bold text-on-surface uppercase tracking-widest">Admin Settings</h3>
-                  <ShieldCheck size={20} className="text-tertiary" />
+            <div className="shrink-0 pt-2">
+              {isShellLoading ? (
+                <div className="h-12 w-32 bg-white/5 rounded-lg animate-pulse" />
+              ) : (
+                <div className="bg-surface-container-high/50 border border-white/5 px-3 py-1 rounded-lg flex items-center gap-5 backdrop-blur-sm hover:border-indigo-500/30 transition-all">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest leading-none mb-1">Invite Code</span>
+                    <span className="font-mono text-sm font-bold text-on-surface">{activeRoom?.invite_code}</span>
+                  </div>
+                  <button onClick={() => navigator.clipboard.writeText(activeRoom?.invite_code || '').then(() => toast.success('Copied!'))}
+                    className="p-1.5 hover:bg-indigo-500/10 rounded-md text-indigo-400 transition-colors">
+                    <Copy size={16} strokeWidth={2.5} />
+                  </button>
                 </div>
-                <div className="space-y-6">
-                  {/* Toggle: Contest Lock */}
-                  <div className="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
-                    <div>
-                      <p className="font-semibold text-on-surface">Lock Room</p>
-                      <p className="text-xs text-on-surface-variant">People cannot join</p>
-                    </div>
-                    <button onClick={toggleLockRoom} className={`w-12 h-6 ${isLockRoom ? 'bg-tertiary' : 'bg-surface-container-highest'} rounded-full relative transition-all`}>
-                      <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${isLockRoom ? 'bg-on-tertiary right-1' : 'bg-outline left-1'}`}></div>
-                    </button>
-                  </div>
-
-                  {/* Toggle: Modify Teams */}
-                  <div className="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
-                    <div>
-                      <p className="font-semibold text-on-surface">Modify teams</p>
-                      <p className="text-xs text-on-surface-variant">Allow people to change their team</p>
-                    </div>
-                    <button onClick={toggleModifyTeams} className={`w-12 h-6 ${isModifyTeamsRaw ? 'bg-tertiary' : 'bg-surface-container-highest'} rounded-full relative transition-all`}>
-                      <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${isModifyTeamsRaw ? 'bg-on-tertiary right-1' : 'bg-outline left-1'}`}></div>
-                    </button>
-                  </div>
-
-                  {/* Toggle: Allow Duplicates */}
-                  <div className="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
-                    <div>
-                      <p className="font-semibold text-on-surface">Allow Duplicates</p>
-                      <p className="text-xs text-on-surface-variant">Players in teams</p>
-                    </div>
-                    <button onClick={toggleAllowDuplicates} className={`w-12 h-6 ${allowDuplicates ? 'bg-tertiary' : 'bg-surface-container-highest'} rounded-full relative transition-all`}>
-                      <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${allowDuplicates ? 'bg-on-tertiary right-1' : 'bg-outline left-1'}`}></div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
+              )}
+            </div>
           </div>
         </div>
-      )} {/* end team-detail/bento conditional */}
-    </div>
+
+        {/* Desktop Body */}
+        {viewingParticipant ? (
+          <TeamDetailView
+            participant={viewingParticipant}
+            allParticipants={participantsWithScores}
+            players={players}
+            isModifyTeams={isModifyTeams}
+            onBack={() => setViewingParticipant(null)}
+            onSwitch={(p) => setViewingParticipant(p)}
+          />
+        ) : (
+          <div className="grid grid-cols-12 gap-6">
+            {/* Leaderboard */}
+            <div className="col-span-12 lg:col-span-8 order-2 lg:order-1">
+              <div className="bg-surface-container-low rounded-2xl min-h-[500px] flex flex-col border border-white/5">
+                <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-2xl mb-2 font-bold font-headline text-on-surface">Leaderboard</h3>
+                    <p className="text-sm text-on-surface-variant">Total Teams: {participantsWithScores.length}</p>
+                  </div>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-left border-collapse" style={{ minWidth: '400px' }}>
+                    <thead className="bg-surface-container-lowest/50">
+                      <tr>
+                        <th className="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest">#</th>
+                        <th className="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest">Team</th>
+                        <th className="px-8 py-4 text-[10px] font-bold text-outline uppercase tracking-widest">Pts</th>
+                        <th className="px-8 py-4"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 relative">
+                      {loadingMembers ? (
+                        [...Array(5)].map((_, i) => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="px-8 py-6"><div className="h-4 w-4 bg-white/5 rounded" /></td>
+                            <td className="px-8 py-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-lg bg-white/5" />
+                                <div className="space-y-2">
+                                  <div className="h-4 w-32 bg-white/5 rounded" />
+                                  <div className="h-3 w-24 bg-white/5 rounded" />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6"><div className="h-4 w-12 bg-white/5 rounded" /></td>
+                            <td className="px-8 py-6"><div className="h-4 w-8 bg-white/5 rounded ml-auto" /></td>
+                          </tr>
+                        ))
+                      ) : participantsWithScores.length === 0 ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-slate-500">No teams have joined yet.</td></tr>
+                      ) : (
+                        participantsWithScores.map((p, idx) => {
+                          const isMe = user && p.profile_id === user.id;
+                          const avatarColors = ['bg-primary/20 text-primary','bg-orange-500/10 text-orange-400','bg-emerald-500/10 text-emerald-400','bg-rose-500/10 text-rose-400'];
+                          const aClass = avatarColors[idx % 4];
+                          return (
+                            <tr key={p.id}
+                              className={`transition-colors cursor-pointer ${isMe ? 'bg-indigo-500/[0.08] ring-1 ring-inset ring-indigo-500/20 hover:bg-indigo-500/[0.12]' : 'hover:bg-white/5'}`}
+                              onClick={() => setViewingParticipant(participantsWithScores.find(ps => ps.id === p.id) || null)}>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center gap-1">
+                                  {idx === 0 && p.score > 0 && <Crown size={14} className="text-tertiary mr-1 fill-tertiary/20" strokeWidth={2.5} />}
+                                  <span className="text-on-surface font-semibold">{idx + 1}</span>
+                                </div>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center gap-4">
+                                  {p.ipl_team ? (
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white/5 border border-white/10 p-1">
+                                      <img src={`/logos/${p.ipl_team.toLowerCase()}.png`} alt={p.ipl_team} width={40} height={40}
+                                        className="object-contain w-full h-full drop-shadow"
+                                        onError={e => { e.currentTarget.style.display='none'; const f=e.currentTarget.nextElementSibling as HTMLElement|null; if(f) f.style.display='flex'; }} />
+                                      <div style={{display:'none'}} className={`w-full h-full flex justify-center items-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>{p.ipl_team.substring(0,3)}</div>
+                                    </div>
+                                  ) : (
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs uppercase tracking-tighter ${aClass}`}>
+                                      {(p.name||'?').split(' ').map((n:string)=>n[0]).join('').substring(0,2)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-bold text-on-surface flex items-center gap-2">
+                                      {p.profiles?.display_name || 'Manager'}
+                                      {activeRoom && p.profile_id === activeRoom.creator_id && <span className="text-[9px] px-1.5 py-0.5 rounded bg-tertiary/20 text-tertiary font-bold uppercase tracking-widest">Host</span>}
+                                      {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold uppercase tracking-widest">You</span>}
+                                    </p>
+                                    <p className="text-xs text-on-surface-variant line-clamp-1">{p.ipl_team ? IPL_FRANCHISES.find(f=>f.id===p.ipl_team)?.name : 'Unassigned'}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-8 py-6 text-tertiary font-bold">{p.score}</td>
+                              <td className="px-8 py-6 text-right relative">
+                                <div className="group/menu relative inline-block text-left">
+                                  <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-surface-container-highest rounded-lg transition-all text-outline" onClick={e=>e.stopPropagation()}>
+                                    <MoreVertical size={20} />
+                                  </button>
+                                  <div className="hidden group-hover/menu:block absolute right-0 top-full w-48 rounded-md shadow-lg bg-surface-container-high ring-1 ring-black ring-opacity-5 z-50">
+                                    <div className="py-1">
+                                      <button onClick={e=>{e.stopPropagation(); setViewingParticipant(participantsWithScores.find(ps=>ps.id===p.id)||null);}}
+                                        className="text-sm font-medium text-on-surface hover:bg-white/5 block w-full text-left px-4 py-2 flex items-center gap-2">
+                                        <Eye size={16} strokeWidth={2.5} /> View team
+                                      </button>
+                                      {isHost && !isMe && (
+                                        <button onClick={e=>{e.stopPropagation(); handleKick(p.profile_id);}}
+                                          className="text-sm font-bold text-error hover:bg-error/10 block w-full text-left px-4 py-2 flex items-center gap-2">
+                                          <UserMinus size={16} strokeWidth={2.5} /> Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="col-span-12 lg:col-span-4 space-y-6 order-1 lg:order-2">
+              {/* Manage Team */}
+              <div className={`bg-surface-container-low p-6 rounded-2xl border border-white/5 transition-all ${dropdownsFrozen ? 'opacity-75' : ''}`}>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-sm font-bold text-on-surface uppercase tracking-widest flex items-center gap-2">
+                    Manage Team {dropdownsFrozen && <Lock size={12} className="text-outline" strokeWidth={3} />}
+                  </h3>
+                  <button onClick={handleManualUpdate} disabled={dropdownsFrozen}
+                    className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-primary text-on-primary px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    Update
+                  </button>
+                </div>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest">Choose Team</label>
+                    <div className="relative">
+                      <select disabled={dropdownsFrozen} value={selectedGlobalTeamId}
+                        onChange={e => { setSelectedGlobalTeamId(e.target.value); if (selectedIplTeam && e.target.value) handleTeamMappingUpdate(e.target.value, selectedIplTeam); }}
+                        className="w-full bg-surface-container-lowest border border-white/10 rounded-lg py-3 px-4 text-sm font-medium text-on-surface appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer disabled:cursor-not-allowed">
+                        <option value="">Select your team</option>
+                        {myGlobalTeams.map(t => {
+                          const hasDupes = !allowDuplicates && containsDuplicates(t.selected_players);
+                          return <option key={t.id} value={t.id} disabled={hasDupes}>{t.name}{hasDupes ? ' (Includes Dupes)' : ''}</option>;
+                        })}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline"><ChevronDown size={16} strokeWidth={2.5} /></div>
+                    </div>
+                    {!allowDuplicates && <p className="text-[10px] text-error/80 uppercase font-bold tracking-widest">No Duplicates Mode ENFORCED</p>}
+                    {dropdownsFrozen && <p className="text-[10px] text-outline uppercase font-bold tracking-widest mt-1">LOCKED BY ADMIN</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest">Select IPL Team</label>
+                    <div className="relative">
+                      <select disabled={dropdownsFrozen} value={selectedIplTeam}
+                        onChange={e => { setSelectedIplTeam(e.target.value); if (selectedGlobalTeamId && e.target.value) handleTeamMappingUpdate(selectedGlobalTeamId, e.target.value); }}
+                        className="w-full bg-surface-container-lowest border border-white/10 rounded-lg py-3 px-4 text-sm font-medium text-on-surface appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer disabled:cursor-not-allowed">
+                        <option value="">Choose an IPL team</option>
+                        {IPL_FRANCHISES.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline"><ChevronDown size={16} strokeWidth={2.5} /></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Settings */}
+              {isHost && (
+                <div className="bg-surface-container-low p-6 rounded-2xl border border-white/5">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-sm font-bold text-on-surface uppercase tracking-widest">Admin Settings</h3>
+                    <ShieldCheck size={20} className="text-tertiary" />
+                  </div>
+                  <div className="space-y-6">
+                    {[
+                      { label: 'Lock Room', sub: 'People cannot join', active: isLockRoom, toggle: toggleLockRoom },
+                      { label: 'Modify teams', sub: 'Allow people to change their team', active: isModifyTeamsRaw, toggle: toggleModifyTeams },
+                      { label: 'Allow Duplicates', sub: 'Players in teams', active: allowDuplicates, toggle: toggleAllowDuplicates },
+                    ].map(({ label, sub, active, toggle }) => (
+                      <div key={label} className="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg">
+                        <div>
+                          <p className="font-semibold text-on-surface">{label}</p>
+                          <p className="text-xs text-on-surface-variant">{sub}</p>
+                        </div>
+                        <button onClick={toggle} className={`w-12 h-6 ${active ? 'bg-tertiary' : 'bg-surface-container-highest'} rounded-full relative transition-all`}>
+                          <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${active ? 'bg-on-tertiary right-1' : 'bg-outline left-1'}`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
+// ─────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────
 // TeamDetailView Component
 // ─────────────────────────────────────────────────────────
@@ -764,9 +991,11 @@ interface TeamDetailViewProps {
   isModifyTeams: boolean;
   onBack: () => void;
   onSwitch: (p: RoomParticipant & { score?: number }) => void;
+  /** When true: skip the hero header (parent renders its own) and use compact mobile row table */
+  mobileView?: boolean;
 }
 
-function TeamDetailView({ participant, allParticipants, players, isModifyTeams, onBack, onSwitch }: TeamDetailViewProps) {
+function TeamDetailView({ participant, allParticipants, players, isModifyTeams, onBack, onSwitch, mobileView }: TeamDetailViewProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // When Modify Teams is OFF, show the locked snapshot (what was frozen at lock time).
@@ -796,6 +1025,89 @@ function TeamDetailView({ participant, allParticipants, players, isModifyTeams, 
   const totalScore = (participant as RoomParticipant & { score?: number }).score ?? 0;
   const initials = (participant.profiles?.display_name || 'Manager').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
+  // ── Mobile compact view (no duplicate header, compact row table) ──────────
+  if (mobileView) {
+    return (
+      <div className="rounded-b-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
+        {/* Compact player table header */}
+        <div className="flex items-center px-3 py-2.5 border-b border-white/5 gap-1">
+          <div className="w-[140px] flex-shrink-0 text-[8px] font-black uppercase tracking-widest text-slate-500">Player</div>
+          <div className="flex-1 overflow-x-auto hide-scrollbar">
+            <div className="flex gap-1 min-w-max">
+              {loading ? (
+                <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 px-2">Loading...</div>
+              ) : matchCols.map(n => (
+                <div key={n} className="w-8 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 flex-shrink-0">M{n}</div>
+              ))}
+            </div>
+          </div>
+          <div className="w-12 text-right text-[8px] font-black uppercase tracking-widest text-primary flex-shrink-0">Total</div>
+        </div>
+
+        {/* Player rows */}
+        {loading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-1 px-3 py-3 border-b border-white/5 animate-pulse">
+              <div className="w-[140px] space-y-1">
+                <div className="h-3 bg-surface-container-high rounded w-24" />
+                <div className="h-2.5 bg-surface-container-high rounded w-16" />
+              </div>
+              <div className="flex-1 flex gap-1">
+                {[...Array(4)].map((_, j) => <div key={j} className="w-8 h-3 bg-surface-container-high rounded flex-shrink-0" />)}
+              </div>
+              <div className="w-12 h-3 bg-surface-container-high rounded" />
+            </div>
+          ))
+        ) : squadPlayers.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">
+            <p className="text-xs">This participant hasn&apos;t drafted any players yet.</p>
+          </div>
+        ) : squadPlayers.map((player, rowIdx) => {
+          const teamColor = TEAM_COLOR[player.team_short_name];
+          const totalPts = players.find(p => p.player_id === player.player_id)?.overall_points || 0;
+          const relPts = getRelativeMatchPoints(player, playedTeamSchedule, playerHistory);
+          return (
+            <div
+              key={player.player_id}
+              className="flex items-center gap-1 px-3 py-3 border-b border-white/5 last:border-b-0"
+              style={{ background: rowIdx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
+            >
+              {/* Player name */}
+              <div className="w-[140px] flex-shrink-0">
+                <p className="text-xs font-headline font-bold text-on-surface truncate">{player.name}</p>
+                <p className="text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate"
+                  style={{ color: teamColor || '#64748b' }}>
+                  {player.team_short_name} · {formatSkillName(player.skill_name)}
+                </p>
+              </div>
+              {/* Match points — horizontally scrollable */}
+              <div className="flex-1 overflow-x-auto hide-scrollbar">
+                <div className="flex gap-1 min-w-max">
+                  {matchCols.map((n) => {
+                    const pts = relPts[n - 1];
+                    const hasPlayed = pts !== undefined;
+                    return (
+                      <div key={n} className="w-8 text-center text-[10px] font-headline font-bold flex-shrink-0">
+                        {hasPlayed
+                          ? <span className={pts === 0 ? 'text-slate-600' : 'text-on-surface'}>{pts}</span>
+                          : <span className="text-slate-700">–</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Total */}
+              <div className="w-12 text-right font-headline font-black text-tertiary text-sm flex-shrink-0">
+                {totalPts}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── Desktop full view (with hero header) ────────────────────────────────
   return (
     <div className="bg-surface-container-low rounded-2xl border border-white/5">
       {/* Hero Header — overflow-visible so the Switch Team dropdown is never clipped */}

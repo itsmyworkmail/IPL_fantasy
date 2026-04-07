@@ -66,11 +66,13 @@ export function useFantasyData(refreshIntervalMs: number = 60000): UseFantasyDat
       }
     } catch (err: unknown) {
       clearTimeout(timeoutId);
-      // AbortError is expected on timeout — log quietly, never surface to the UI
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log('Fetch players timed out or aborted — will retry on next focus.');
-        return;
-      }
+      // AbortError is a Supabase WebSocket lock-steal artifact — swallow silently.
+      const isAbort = (err instanceof Error && err.name === 'AbortError') ||
+        (typeof err === 'object' && err !== null && (err as Record<string, unknown>).name === 'AbortError') ||
+        (typeof err === 'string' && err.includes('AbortError'));
+      if (isAbort) return;
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || JSON.stringify(err);
+      if (msg?.includes('AbortError')) return;
       console.error('Failed to fetch players:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch player data');
     } finally {
