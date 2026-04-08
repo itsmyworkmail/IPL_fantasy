@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -22,17 +23,30 @@ export const metadata: Metadata = {
   description:
     "Premium real-time IPL fantasy cricket points tracker. Track player stats, manage your squad, and compete in private contests with friends.",
   keywords: ["IPL", "fantasy", "cricket", "points", "tracker", "live"],
+  /**
+   * iOS PWA: "Add to Home Screen" behaviour.
+   * apple-icon.tsx handles the <link rel="apple-touch-icon"> automatically.
+   * These meta tags control how the app looks once launched from the home screen.
+   */
+  appleWebApp: {
+    capable: true,
+    title: "CricTrack",
+    statusBarStyle: "black-translucent",
+  },
+  /** Prevent iOS from auto-linking phone numbers in the UI */
+  formatDetection: { telephone: false },
 };
 
 /**
- * Viewport export — ensures mobile browsers render at device width.
- * Without this, after OAuth redirects browsers default to ~980px
- * "desktop" mode, making the md:hidden mobile shell invisible.
+ * Viewport export — keeps mobile browsers at device width after OAuth redirects,
+ * and sets the status bar / browser chrome colour to match the app theme.
  */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  /** Colours the Android Chrome URL bar / status bar to match the dark theme */
+  themeColor: "#080e1a",
 };
 
 export default function RootLayout({
@@ -55,6 +69,8 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        {/* Registers /sw.js in production — no-op in dev to avoid HMR conflicts */}
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

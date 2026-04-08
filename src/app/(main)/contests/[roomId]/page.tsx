@@ -61,7 +61,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   const [viewingParticipant, setViewingParticipant] = useState<RoomParticipant | null>(null);
 
   // Mobile tabbed management panel
-  const [mobileTab, setMobileTab] = useState<'management' | 'team'>('team');
+  const [mobileMainTab, setMobileMainTab] = useState<'leaderboard' | 'settings'>('leaderboard');
   // Mobile leaderboard per-row dropdown
   const [mobileMenuOpenId, setMobileMenuOpenId] = useState<string | null>(null);
 
@@ -484,7 +484,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
           </div>
         ) : (
           <>
-            {/* ── Contest Header Card ── */}
+            {/* ── Contest Header Card (A1: editable title + subtitle for host) ── */}
             <div className="relative overflow-hidden rounded-2xl bg-surface-container-high p-4 border border-white/5">
               <div className="flex justify-between items-center mb-3">
                 {isShellLoading ? (
@@ -512,198 +512,247 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                   <div className="h-3 w-36 bg-white/5 rounded animate-pulse" />
                 </div>
               ) : (
-                <div className="space-y-1">
-                  <h2 className="font-headline text-xl font-extrabold text-on-background leading-tight">{activeRoom?.name}</h2>
-                  <p className="text-on-surface-variant text-xs">{activeRoom?.description || ''}</p>
+                <div className="space-y-1.5">
+                  {/* Editable Title */}
+                  {isEditingTitle && isHost ? (
+                    <input
+                      autoFocus
+                      value={editTitleBuffer}
+                      onChange={e => setEditTitleBuffer(e.target.value)}
+                      onBlur={handleTitleSubmit}
+                      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                      className="w-full bg-transparent text-xl font-extrabold font-headline text-on-background border-b border-primary/70 outline-none pb-0.5 leading-tight"
+                    />
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <h2 className="font-headline text-xl font-extrabold text-on-background leading-tight flex-1">{activeRoom?.name}</h2>
+                      {isHost && (
+                        <button
+                          onPointerDown={e => { e.preventDefault(); setIsEditingTitle(true); }}
+                          className="flex-shrink-0 mt-1 p-1 rounded-md bg-white/5 active:bg-white/10 transition-colors">
+                          <Pen size={11} className="text-slate-500" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {/* Editable Description */}
+                  {isEditingDesc && isHost ? (
+                    <input
+                      autoFocus
+                      value={editDescBuffer}
+                      onChange={e => setEditDescBuffer(e.target.value)}
+                      onBlur={handleDescSubmit}
+                      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                      className="w-full bg-transparent text-xs text-on-surface-variant border-b border-primary/40 outline-none pb-0.5"
+                      placeholder="Add a subtitle..."
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-on-surface-variant text-xs flex-1">
+                        {activeRoom?.description || (isHost ? 'Tap ✏ to add subtitle...' : '')}
+                      </p>
+                      {isHost && (
+                        <button
+                          onPointerDown={e => { e.preventDefault(); setIsEditingDesc(true); }}
+                          className="flex-shrink-0 p-0.5 rounded bg-white/5 active:bg-white/10 transition-colors">
+                          <Pen size={9} className="text-slate-600" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* ── Leaderboard ── */}
-            <section className="flex flex-col">
-              <div className="flex items-center justify-between mb-2 px-1 border-b border-white/5 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-primary text-xl">📊</span>
-                  <h3 className="font-headline text-sm font-bold text-on-background uppercase tracking-tight">Leaderboard</h3>
-                </div>
-              </div>
+            {/* ── A3: Top-Level Tabs: Leaderboard | Settings ── */}
+            <div className="flex bg-surface-container-highest/30 p-1 rounded-xl border border-white/5">
+              <button
+                onClick={() => setMobileMainTab('leaderboard')}
+                className={`flex-1 py-2 text-[11px] font-headline transition-all rounded-lg ${mobileMainTab === 'leaderboard' ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20' : 'text-outline-variant font-medium'}`}>
+                📊 Leaderboard
+              </button>
+              <button
+                onClick={() => setMobileMainTab('settings')}
+                className={`flex-1 py-2 text-[11px] font-headline transition-all rounded-lg ${mobileMainTab === 'settings' ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20' : 'text-outline-variant font-medium'}`}>
+                ⚙️ Settings
+              </button>
+            </div>
 
-              {/* Scrollable leaderboard — fixed height shows ~7 rows */}
-              <div className="space-y-1.5 overflow-y-auto hide-scrollbar pr-1" style={{ maxHeight: '406px' }}>
-                {loadingMembers ? (
-                  [...Array(5)].map((_, i) => (
-                    <div key={i} className="bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border border-white/5 animate-pulse">
-                      <div className="w-6 h-4 bg-white/5 rounded" />
-                      <div className="w-10 h-10 rounded-lg bg-white/5 flex-shrink-0" />
-                      <div className="flex-1 space-y-1.5">
-                        <div className="h-3 w-28 bg-white/5 rounded" />
-                        <div className="h-2 w-16 bg-white/5 rounded" />
+            {/* ── Leaderboard Tab ── */}
+            {mobileMainTab === 'leaderboard' && (
+              <section>
+                <div className="space-y-1.5 overflow-y-auto hide-scrollbar" style={{ maxHeight: '420px' }}>
+                  {loadingMembers ? (
+                    [...Array(5)].map((_, i) => (
+                      <div key={i} className="bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border border-white/5 animate-pulse">
+                        <div className="w-6 h-4 bg-white/5 rounded" />
+                        <div className="w-10 h-10 rounded-lg bg-white/5 flex-shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3 w-28 bg-white/5 rounded" />
+                          <div className="h-2 w-16 bg-white/5 rounded" />
+                        </div>
+                        <div className="h-4 w-12 bg-white/5 rounded" />
                       </div>
-                      <div className="h-4 w-12 bg-white/5 rounded" />
-                    </div>
-                  ))
-                ) : participantsWithScores.length === 0 ? (
-                  <p className="text-center text-slate-500 py-8 text-sm">No teams have joined yet.</p>
-                ) : (
-                  participantsWithScores.map((p, idx) => {
-                    const isMe = user && p.profile_id === user.id;
-                    const avatarColors = ['bg-primary/20 text-primary','bg-orange-500/10 text-orange-400','bg-emerald-500/10 text-emerald-400','bg-rose-500/10 text-rose-400'];
-                    const aClass = avatarColors[idx % 4];
-                    const menuOpen = mobileMenuOpenId === p.id;
-                    return (
-                      <div key={p.id} className={`relative bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border transition-colors active:bg-white/10 ${isMe ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-white/5'}`}
-                        onClick={() => { setViewingParticipant(participantsWithScores.find(ps => ps.id === p.id) || null); }}>
-                        {/* Rank */}
-                        <div className="w-6 text-center font-headline font-bold text-xs flex-shrink-0" style={{ color: idx === 0 && p.score > 0 ? '#fd9000' : '#73757d' }}>
-                          {idx === 0 && p.score > 0 ? '👑' : idx + 1}
-                        </div>
-                        {/* Avatar */}
-                        {p.ipl_team ? (
-                          <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden border border-white/10 p-1 flex-shrink-0">
-                            <img src={`/logos/${p.ipl_team.toLowerCase()}.png`} alt={p.ipl_team} width={32} height={32}
-                              className="object-contain w-full h-full"
-                              onError={(e) => { e.currentTarget.style.display='none'; const f = e.currentTarget.nextElementSibling as HTMLElement|null; if(f) f.style.display='flex'; }} />
-                            <div style={{display:'none'}} className={`w-full h-full flex justify-center items-center font-bold text-[9px] uppercase ${aClass}`}>{p.ipl_team.substring(0,3)}</div>
+                    ))
+                  ) : participantsWithScores.length === 0 ? (
+                    <p className="text-center text-slate-500 py-8 text-sm">No teams have joined yet.</p>
+                  ) : (
+                    participantsWithScores.map((p, idx) => {
+                      const isMe = user && p.profile_id === user.id;
+                      const avatarColors = ['bg-primary/20 text-primary','bg-orange-500/10 text-orange-400','bg-emerald-500/10 text-emerald-400','bg-rose-500/10 text-rose-400'];
+                      const aClass = avatarColors[idx % 4];
+                      const menuOpen = mobileMenuOpenId === p.id;
+                      // A2: flip dropdown upward for the last 2 items to prevent overflow
+                      const opensUpward = idx >= participantsWithScores.length - 2;
+                      return (
+                        <div key={p.id} className={`relative bg-surface-container-high p-2.5 rounded-xl flex items-center gap-3 border transition-colors active:bg-white/10 ${isMe ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-white/5'}`}
+                          onClick={() => { setViewingParticipant(participantsWithScores.find(ps => ps.id === p.id) || null); }}>
+                          {/* Rank */}
+                          <div className="w-6 text-center font-headline font-bold text-xs flex-shrink-0" style={{ color: idx === 0 && p.score > 0 ? '#fd9000' : '#73757d' }}>
+                            {idx === 0 && p.score > 0 ? '👑' : idx + 1}
                           </div>
-                        ) : (
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[9px] uppercase flex-shrink-0 ${aClass}`}>
-                            {(p.name||'?').split(' ').map((n:string)=>n[0]).join('').substring(0,2)}
+                          {/* Avatar */}
+                          {p.ipl_team ? (
+                            <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden border border-white/10 p-1 flex-shrink-0">
+                              <img src={`/logos/${p.ipl_team.toLowerCase()}.png`} alt={p.ipl_team} width={32} height={32}
+                                className="object-contain w-full h-full"
+                                onError={(e) => { e.currentTarget.style.display='none'; const f = e.currentTarget.nextElementSibling as HTMLElement|null; if(f) f.style.display='flex'; }} />
+                              <div style={{display:'none'}} className={`w-full h-full flex justify-center items-center font-bold text-[9px] uppercase ${aClass}`}>{p.ipl_team.substring(0,3)}</div>
+                            </div>
+                          ) : (
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[9px] uppercase flex-shrink-0 ${aClass}`}>
+                              {(p.name||'?').split(' ').map((n:string)=>n[0]).join('').substring(0,2)}
+                            </div>
+                          )}
+                          {/* Name */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-headline font-bold text-on-surface text-xs truncate flex items-center gap-1">
+                              {p.profiles?.display_name || 'Manager'}
+                              {isMe && <span className="text-[7px] px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold uppercase">You</span>}
+                            </h4>
+                            <p className="text-[9px] text-outline uppercase truncate">{IPL_FRANCHISES.find(f=>f.id===p.ipl_team)?.name || 'Unassigned'}</p>
                           </div>
-                        )}
-                        {/* Name */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-headline font-bold text-on-surface text-xs truncate flex items-center gap-1">
-                            {p.profiles?.display_name || 'Manager'}
-                            {isMe && <span className="text-[7px] px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold uppercase">You</span>}
-                          </h4>
-                          <p className="text-[9px] text-outline uppercase truncate">{IPL_FRANCHISES.find(f=>f.id===p.ipl_team)?.name || 'Unassigned'}</p>
-                        </div>
-                        {/* Score */}
-                        <div className="text-right flex-shrink-0" onClick={e => e.stopPropagation()}>
-                          <p className="font-headline font-extrabold text-sm text-tertiary">{p.score}</p>
-                          <p className="text-[8px] text-outline uppercase">Pts</p>
-                        </div>
-                        {/* More options */}
-                        {isHost && (
-                          <button className="p-1 text-outline flex-shrink-0" onClick={e => { e.stopPropagation(); setMobileMenuOpenId(menuOpen ? null : p.id); }}>
-                            <MoreVertical size={16} />
-                          </button>
-                        )}
-                        {menuOpen && isHost && (
-                          <div className="absolute right-0 top-full mt-1 z-50 bg-surface-container-high border border-white/10 rounded-xl shadow-2xl py-1 min-w-[120px]" onClick={e=>e.stopPropagation()}>
-                            <button onClick={() => { setViewingParticipant(participantsWithScores.find(ps=>ps.id===p.id)||null); setMobileMenuOpenId(null); }}
-                              className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2">
-                              <Eye size={12} /> View Team
+                          {/* Score */}
+                          <div className="text-right flex-shrink-0" onClick={e => e.stopPropagation()}>
+                            <p className="font-headline font-extrabold text-sm text-tertiary">{p.score}</p>
+                            <p className="text-[8px] text-outline uppercase">Pts</p>
+                          </div>
+                          {/* More options */}
+                          {isHost && (
+                            <button className="p-1 text-outline flex-shrink-0" onClick={e => { e.stopPropagation(); setMobileMenuOpenId(menuOpen ? null : p.id); }}>
+                              <MoreVertical size={16} />
                             </button>
-                            {!isMe && (
-                              <button onClick={() => { handleKick(p.profile_id); setMobileMenuOpenId(null); }}
-                                className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5">
-                                <UserMinus size={12} /> Remove
+                          )}
+                          {/* A2: dropdown flips upward for last 2 rows */}
+                          {menuOpen && isHost && (
+                            <div
+                              className={`absolute right-0 z-50 bg-surface-container-high border border-white/10 rounded-xl shadow-2xl py-1 min-w-[120px] ${opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+                              onClick={e => e.stopPropagation()}>
+                              <button onClick={() => { setViewingParticipant(participantsWithScores.find(ps=>ps.id===p.id)||null); setMobileMenuOpenId(null); }}
+                                className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2">
+                                <Eye size={12} /> View Team
                               </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-
-            {/* ── Tabbed Management ── */}
-            <section>
-              <div className="flex bg-surface-container-highest/30 p-1 rounded-xl mb-3 border border-white/5">
-                {isHost && (
-                  <button
-                    onClick={() => setMobileTab('management')}
-                    className={`flex-1 py-2 text-xs font-headline transition-all rounded-lg ${mobileTab === 'management' ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20' : 'text-outline-variant font-medium'}`}>
-                    Contest Management
-                  </button>
-                )}
-                <button
-                  onClick={() => setMobileTab('team')}
-                  className={`flex-1 py-2 text-xs font-headline transition-all rounded-lg ${mobileTab === 'team' ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20' : 'text-outline-variant font-medium'}`}>
-                  Manage Team
-                </button>
-              </div>
-
-              {/* Contest Management tab */}
-              {mobileTab === 'management' && isHost && (
-                <div className="bg-surface-container rounded-xl divide-y divide-white/5 overflow-hidden border border-white/5">
-                  {[
-                    { icon: <Lock size={18} className="text-primary" />, label: 'Lock Room', sub: 'Prevent new entries', active: isLockRoom, toggle: toggleLockRoom },
-                    { icon: <Pen size={18} className="text-secondary" />, label: 'Modify teams', sub: 'Allow roster changes', active: isModifyTeamsRaw, toggle: toggleModifyTeams },
-                    { icon: <Copy size={18} className="text-tertiary" />, label: 'Allow Duplicates', sub: 'Identical rosters', active: allowDuplicates, toggle: toggleAllowDuplicates },
-                  ].map(({ icon, label, sub, active, toggle }) => (
-                    <div key={label} className="px-4 py-3.5 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {icon}
-                        <div>
-                          <p className="font-headline font-bold text-xs">{label}</p>
-                          <p className="text-[10px] text-outline">{sub}</p>
+                              {!isMe && (
+                                <button onClick={() => { handleKick(p.profile_id); setMobileMenuOpenId(null); }}
+                                  className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5">
+                                  <UserMinus size={12} /> Remove
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <button onClick={toggle}
-                        className={`w-10 h-5 rounded-full relative transition-all flex-shrink-0 ${active ? 'bg-primary' : 'bg-surface-container-highest'}`}>
-                        <div className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white transition-all ${active ? 'right-[3px]' : 'left-[3px]'}`} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Manage Team tab */}
-              {mobileTab === 'team' && (
-                <div className={`bg-surface-container rounded-xl p-4 border border-white/5 space-y-4 ${dropdownsFrozen ? 'opacity-75' : ''}`}>
-                  {dropdownsFrozen && (
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-outline uppercase tracking-widest">
-                      <Lock size={10} strokeWidth={3} /> Locked by admin
-                    </div>
+                      );
+                    })
                   )}
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <label className="text-[9px] font-bold text-outline uppercase mb-1.5 block ml-1 tracking-wider">User Team</label>
-                      <select disabled={dropdownsFrozen} value={selectedGlobalTeamId}
-                        onChange={e => { setSelectedGlobalTeamId(e.target.value); if (selectedIplTeam && e.target.value) handleTeamMappingUpdate(e.target.value, selectedIplTeam); }}
-                        className="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold disabled:cursor-not-allowed">
-                        <option value="">Select your team</option>
-                        {myGlobalTeams.map(t => {
-                          const hasDupes = !allowDuplicates && containsDuplicates(t.selected_players);
-                          return <option key={t.id} value={t.id} disabled={hasDupes}>{t.name}{hasDupes ? ' (Dupes)' : ''}</option>;
-                        })}
-                      </select>
-                      <div className="absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 pointer-events-none text-outline">
-                        <ChevronDown size={14} />
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <label className="text-[9px] font-bold text-outline uppercase mb-1.5 block ml-1 tracking-wider">IPL Franchise</label>
-                      <select disabled={dropdownsFrozen} value={selectedIplTeam}
-                        onChange={e => { setSelectedIplTeam(e.target.value); if (selectedGlobalTeamId && e.target.value) handleTeamMappingUpdate(selectedGlobalTeamId, e.target.value); }}
-                        className="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold disabled:cursor-not-allowed">
-                        <option value="">Choose an IPL team</option>
-                        {IPL_FRANCHISES.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
-                      <div className="absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 pointer-events-none text-outline">
-                        <ChevronDown size={14} />
-                      </div>
+                </div>
+              </section>
+            )}
+
+            {/* ── Settings Tab ── */}
+            {mobileMainTab === 'settings' && (
+              <div className="space-y-4">
+                {/* Admin Controls — host only */}
+                {isHost && (
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 px-1">Admin Controls</p>
+                    <div className="bg-surface-container rounded-xl divide-y divide-white/5 overflow-hidden border border-white/5">
+                      {[
+                        { icon: <Lock size={18} className="text-primary" />, label: 'Lock Room', sub: 'Prevent new entries', active: isLockRoom, toggle: toggleLockRoom },
+                        { icon: <Pen size={18} className="text-secondary" />, label: 'Modify Teams', sub: 'Allow roster changes', active: isModifyTeamsRaw, toggle: toggleModifyTeams },
+                        { icon: <Copy size={18} className="text-tertiary" />, label: 'Allow Duplicates', sub: 'Identical rosters', active: allowDuplicates, toggle: toggleAllowDuplicates },
+                      ].map(({ icon, label, sub, active, toggle }) => (
+                        <div key={label} className="px-4 py-3.5 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {icon}
+                            <div>
+                              <p className="font-headline font-bold text-xs">{label}</p>
+                              <p className="text-[10px] text-outline">{sub}</p>
+                            </div>
+                          </div>
+                          <button onClick={toggle}
+                            className={`w-10 h-5 rounded-full relative transition-all flex-shrink-0 ${active ? 'bg-primary' : 'bg-surface-container-highest'}`}>
+                            <div className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white transition-all ${active ? 'right-[3px]' : 'left-[3px]'}`} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <button onClick={handleManualUpdate} disabled={dropdownsFrozen}
-                    className="w-full bg-primary text-on-primary py-3.5 rounded-lg font-headline font-extrabold text-[11px] uppercase tracking-widest active:scale-95 transition-transform shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed">
-                    Update Team Selection
-                  </button>
-                </div>
-              )}
-            </section>
+                )}
 
-            {/* ── Danger Zone ── */}
-            <button
-              onClick={isHost ? handleDeleteContest : handleLeave}
-              className="w-full py-4 rounded-xl border border-error/30 text-error font-headline font-extrabold text-[11px] uppercase tracking-[0.2em] active:bg-error/10 transition-colors flex items-center justify-center gap-2">
-              <Trash2 size={14} />
-              {isHost ? 'Dissolve Contest Room' : 'Leave Contest'}
-            </button>
+                {/* My Team */}
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 px-1">My Team</p>
+                  <div className={`bg-surface-container rounded-xl p-4 border border-white/5 space-y-4 ${dropdownsFrozen ? 'opacity-75' : ''}`}>
+                    {dropdownsFrozen && (
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-outline uppercase tracking-widest">
+                        <Lock size={10} strokeWidth={3} /> Locked by admin
+                      </div>
+                    )}
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <label className="text-[9px] font-bold text-outline uppercase mb-1.5 block ml-1 tracking-wider">User Team</label>
+                        <select disabled={dropdownsFrozen} value={selectedGlobalTeamId}
+                          onChange={e => { setSelectedGlobalTeamId(e.target.value); if (selectedIplTeam && e.target.value) handleTeamMappingUpdate(e.target.value, selectedIplTeam); }}
+                          className="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold disabled:cursor-not-allowed">
+                          <option value="">Select your team</option>
+                          {myGlobalTeams.map(t => {
+                            const hasDupes = !allowDuplicates && containsDuplicates(t.selected_players);
+                            return <option key={t.id} value={t.id} disabled={hasDupes}>{t.name}{hasDupes ? ' (Dupes)' : ''}</option>;
+                          })}
+                        </select>
+                        <div className="absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 pointer-events-none text-outline">
+                          <ChevronDown size={14} />
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <label className="text-[9px] font-bold text-outline uppercase mb-1.5 block ml-1 tracking-wider">IPL Franchise</label>
+                        <select disabled={dropdownsFrozen} value={selectedIplTeam}
+                          onChange={e => { setSelectedIplTeam(e.target.value); if (selectedGlobalTeamId && e.target.value) handleTeamMappingUpdate(selectedGlobalTeamId, e.target.value); }}
+                          className="w-full bg-surface-container-highest/50 border border-white/10 rounded-lg py-3 px-3 text-xs text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:outline-none font-headline font-bold disabled:cursor-not-allowed">
+                          <option value="">Choose an IPL team</option>
+                          {IPL_FRANCHISES.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        </select>
+                        <div className="absolute right-3 top-[calc(50%+10px)] -translate-y-1/2 pointer-events-none text-outline">
+                          <ChevronDown size={14} />
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={handleManualUpdate} disabled={dropdownsFrozen}
+                      className="w-full bg-primary text-on-primary py-3.5 rounded-lg font-headline font-extrabold text-[11px] uppercase tracking-widest active:scale-95 transition-transform shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed">
+                      Update Team Selection
+                    </button>
+                  </div>
+                </div>
+
+                {/* Danger Zone */}
+                <button
+                  onClick={isHost ? handleDeleteContest : handleLeave}
+                  className="w-full py-4 rounded-xl border border-error/30 text-error font-headline font-extrabold text-[11px] uppercase tracking-[0.2em] active:bg-error/10 transition-colors flex items-center justify-center gap-2">
+                  <Trash2 size={14} />
+                  {isHost ? 'Dissolve Contest Room' : 'Leave Contest'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
