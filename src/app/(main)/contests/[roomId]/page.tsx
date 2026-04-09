@@ -290,7 +290,10 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   const settings = activeRoom?.settings || { lock_room: false, modify_teams: true, allow_duplicates: true };
   const isLockRoom = settings.lock_room === true;
   const isModifyTeamsRaw = settings.modify_teams !== false;
-  const isModifyTeams = isLockRoom ? false : isModifyTeamsRaw;
+  // isModifyTeams is ONLY driven by the modify_teams setting.
+  // Lock Room is intentionally independent — it blocks new joins (see useRooms.ts)
+  // but must NOT override the host's explicit "Modify Teams" setting.
+  const isModifyTeams = isModifyTeamsRaw;
   const allowDuplicates = settings.allow_duplicates !== false;
 
   // Calculate scores for participants using correct reference points based on lock status
@@ -338,14 +341,16 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   };
 
   const handleKick = async (participantId: string) => {
-    if (window.confirm("Remove this participant?")) {
-      // Optimistic kill
-      setParticipants(prev => prev.filter(p => p.profile_id !== participantId));
-      try {
-        await removeParticipant(roomId, participantId);
-      } catch {
-        fetchParticipants(true); // Re-fetch on error
-      }
+    // Optimistic remove — no window.confirm() because that call is silently
+    // blocked in PWA standalone mode on iOS, causing the kick to silently fail.
+    // Two intentional taps (⋮ → Remove) already serve as confirmation.
+    setParticipants(prev => prev.filter(p => p.profile_id !== participantId));
+    try {
+      await removeParticipant(roomId, participantId);
+      toast.success('Participant removed.');
+    } catch {
+      fetchParticipants(true); // Revert optimistic update on error
+      toast.error('Failed to remove participant.');
     }
   };
 
@@ -430,7 +435,9 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
     await updateRoom(roomId, { settings: { ...settings, allow_duplicates: !allowDuplicates } });
   };
 
-  const dropdownsFrozen = !isModifyTeams || (!isHost && isLockRoom);
+  // Manage Team dropdowns are frozen only when the host has disabled team modifications.
+  // Lock Room is intentionally excluded here — it only prevents NEW joins (see useRooms.ts).
+  const dropdownsFrozen = !isModifyTeams;
 
   return (
     <>
@@ -549,7 +556,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                   ) : (
                     <div className="flex items-center gap-2">
                       <p className="text-on-surface-variant text-xs flex-1">
-                        {activeRoom?.description || (isHost ? 'Tap ✏ to add subtitle...' : '')}
+                        {activeRoom?.description || (isHost ? 'Add description...' : '')}
                       </p>
                       {isHost && (
                         <button
@@ -653,7 +660,7 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
                                 <Eye size={12} /> View Team
                               </button>
                               {!isMe && (
-                                <button onClick={() => { handleKick(p.profile_id); setMobileMenuOpenId(null); }}
+                                <button onClick={() => {handleKick(p.profile_id); setMobileMenuOpenId(null); }}
                                   className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-error/10 text-error flex items-center gap-2 border-t border-white/5">
                                   <UserMinus size={12} /> Remove
                                 </button>

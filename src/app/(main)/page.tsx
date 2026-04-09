@@ -55,8 +55,8 @@ function MobileLobby({
   const statusColor = displayMatch?.match_status === '1'
     ? 'bg-red-500/15 text-red-400'
     : displayMatch?.match_status === '2'
-    ? 'bg-amber-500/15 text-amber-400'
-    : 'bg-primary/10 text-primary';
+    ? 'bg-primary/10 text-primary'
+    : 'bg-amber-500/15 text-amber-400';
 
   return (
     <div className="md:hidden px-4 space-y-4">
@@ -83,7 +83,7 @@ function MobileLobby({
       {/* ── Top Performers (horizontal scroll) ── */}
       <section>
         <h3 className="text-[9px] font-black tracking-[0.15em] uppercase text-slate-500 mb-3">Top Performers -
-          <span className="text-[10px] text-slate-500 mt-1 font-medium"> {topPerformersMatchName} - {performerMatch?.match_status === '5' ? 'Match Abandoned' : ''}</span>
+          <span className="text-[10px] text-slate-500 mt-1 font-medium"> {topPerformersMatchName} {performerMatch?.match_status === '5' ? ' - Match Abandoned' : ''}</span>
         </h3>
         <div className="flex gap-3 overflow-x-auto pb-3 hide-scrollbar pt-2">
           {topPerformersLoading ? (
