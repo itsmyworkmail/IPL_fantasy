@@ -16,6 +16,8 @@ interface PlayerRecord {
   SkillId: number;
   OverallPoints: number;
   GamedayPoints: number;
+  /** 'P' = playing/played, 'NP' = not playing/not played */
+  IsAnnounced?: string;
 }
 
 interface TournamentFixture {
@@ -133,6 +135,7 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
         skill_name: p.SkillName,
         skill_id: p.SkillId,
         overall_points: p.OverallPoints,
+        is_announced: p.IsAnnounced ?? 'NP',
         last_updated_at: new Date().toISOString()
       }));
 
@@ -218,6 +221,7 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
       skill_id: p.SkillId,
       overall_points: p.OverallPoints,
       gameday_points: p.GamedayPoints,
+      is_announced: p.IsAnnounced ?? 'NP',
       last_updated_at: new Date().toISOString()
     }));
 

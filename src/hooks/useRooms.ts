@@ -124,17 +124,47 @@ export function useRooms() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createRoom = async (name: string, description?: string) => {
+  const createRoom = async (name: string, options: {
+    description?: string;
+    contestType?: 'simple' | 'daily';
+    numMatches?: number | null;
+    constraints?: {
+      captain_vc?: boolean;
+      min_batsmen?: number;
+      min_bowlers?: number;
+      min_all_rounders?: number;
+      min_wicket_keepers?: number;
+      min_per_team?: number;
+    };
+  } = {}) => {
     if (!user) throw new Error('Must be logged in to create a room');
     const invite_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const { description, contestType = 'simple', numMatches = null, constraints } = options;
+
+    const settings = {
+      lock_room: false,
+      modify_teams: true,
+      allow_duplicates: true,
+      contest_type: contestType,
+      ...(contestType === 'daily' && {
+        num_matches: numMatches,
+        constraints: {
+          captain_vc: false,
+          min_batsmen: 1,
+          min_bowlers: 2,
+          min_all_rounders: 1,
+          min_wicket_keepers: 1,
+          min_per_team: 1,
+          ...constraints,
+        },
+      }),
+    };
 
     try {
       const { data, error } = await supabase
         .from('rooms')
-        .insert([{
-          name, description, creator_id: user.id, invite_code,
-          settings: { lock_room: false, modify_teams: true, allow_duplicates: true },
-        }])
+        .insert([{ name, description, creator_id: user.id, invite_code, settings }])
         .select()
         .single();
 
@@ -154,6 +184,7 @@ export function useRooms() {
       throw err;
     }
   };
+
 
   const joinRoom = async (inviteCode: string) => {
     if (!user) throw new Error('Must be logged in to join a room');

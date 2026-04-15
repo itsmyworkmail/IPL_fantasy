@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useRooms } from '@/hooks/useRooms';
+import { ContestConfigSheet } from '@/components/ContestConfigSheet';
 import { Plus, KeyRound, ArrowRight, AlertCircle, Check, Users, Crown, Trophy } from 'lucide-react';
 
 export default function ContestsLobby() {
@@ -13,6 +14,7 @@ export default function ContestsLobby() {
 
   const [filterType, setFilterType] = useState<'All' | 'Created' | 'Joined'>('All');
   const [createName, setCreateName] = useState('');
+  const [showConfig, setShowConfig] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState('');
@@ -43,17 +45,41 @@ export default function ContestsLobby() {
   const isRoomsLoading = authLoading || (roomsLoading && rooms.length === 0);
 
 
-  const handleCreate = async (e: React.FormEvent) => {
+  // Step 1: user enters name → opens config sheet
+  const handleCreateNext = (e: React.FormEvent) => {
     e.preventDefault();
     if (!createName.trim()) return;
+    setShowConfig(true);
+  };
+
+  // Step 2: config sheet submits → actually create the room
+  const handleConfigSubmit = async (config: {
+    name: string;
+    description: string;
+    contestType: 'simple' | 'daily';
+    numMatches: number | null;
+    constraints: {
+      captain_vc: boolean;
+      min_batsmen: number;
+      min_bowlers: number;
+      min_all_rounders: number;
+      min_wicket_keepers: number;
+    };
+  }) => {
     setIsSubmitting(true);
     setErrorText('');
     try {
-      const room = await createRoom(createName.trim());
+      const room = await createRoom(config.name.trim(), {
+        description: config.description || undefined,
+        contestType: config.contestType,
+        numMatches: config.numMatches,
+        constraints: config.constraints,
+      });
       router.push(`/contests/${room.id}`);
     } catch (err: unknown) {
       setErrorText(err instanceof Error ? err.message : String(err));
       setIsSubmitting(false);
+      setShowConfig(false);
     }
   };
 
@@ -78,7 +104,7 @@ export default function ContestsLobby() {
     return true;
   });
 
-  return (
+  const mainContent = (
     <div className="max-w-7xl mx-auto w-full">
 
       {/* ════════════════════════════════════════════════
@@ -114,7 +140,7 @@ export default function ContestsLobby() {
                   <p className="text-slate-500 mt-1 text-sm">Host your own private tournament with custom rules.</p>
                 </div>
               </div>
-              <form onSubmit={handleCreate} className="flex gap-3">
+              <form onSubmit={handleCreateNext} className="flex gap-3">
                 <input
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
@@ -123,11 +149,11 @@ export default function ContestsLobby() {
                   disabled={isSubmitting}
                 />
                 <button
-                  disabled={isSubmitting || !createName.trim()}
+                  disabled={!createName.trim()}
                   type="submit"
                   className="bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-indigo-400 disabled:opacity-50 transition-all text-sm whitespace-nowrap flex items-center gap-2"
                 >
-                  {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Create'}
+                  Next →
                 </button>
               </form>
             </div>
@@ -315,7 +341,7 @@ export default function ContestsLobby() {
               <span className="text-[8px] font-black uppercase tracking-[0.18em] text-primary">New Contest</span>
             </div>
             <h2 className="text-lg font-headline font-black text-white mb-3">Create Contest</h2>
-            <form onSubmit={handleCreate} className="flex gap-2">
+            <form onSubmit={handleCreateNext} className="flex gap-2">
               <input
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
@@ -324,11 +350,11 @@ export default function ContestsLobby() {
                 disabled={isSubmitting}
               />
               <button
-                disabled={isSubmitting || !createName.trim()}
+                disabled={!createName.trim()}
                 type="submit"
                 className="bg-primary text-[#1000a9] rounded-xl px-4 py-2.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50 active:scale-95 transition-transform"
               >
-                {isSubmitting ? <span className="w-4 h-4 border-2 border-[#1000a9] border-t-transparent rounded-full animate-spin inline-block" /> : 'Create'}
+                Next
               </button>
             </form>
           </div>
@@ -457,6 +483,20 @@ export default function ContestsLobby() {
         </section>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {mainContent}
+      {showConfig && (
+        <ContestConfigSheet
+          initialName={createName}
+          onClose={() => setShowConfig(false)}
+          onSubmit={handleConfigSubmit}
+          isSubmitting={isSubmitting}
+        />
+      )}
+    </>
   );
 }
 

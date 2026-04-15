@@ -42,6 +42,8 @@ export interface GamedayPlayer {
   overall_points: number;
   gameday_points: number;
   last_updated_at: string;
+  /** 'P' = player was announced/played in their team's last match, 'NP' = not played */
+  is_announced?: string;
 }
 
 export interface TourFixture {
@@ -85,4 +87,35 @@ export interface RoomParticipant {
      display_name: string | null;
      avatar_url: string | null;
   };
+}
+
+// ─── Daily Contest ────────────────────────────────────────────────────────────
+
+export type ContestType = 'simple' | 'daily';
+
+export interface ContestConstraints {
+  /** Captain (2×) / Vice-Captain (1.5×) multipliers enabled */
+  captain_vc?: boolean;
+  min_batsmen?: number;
+  min_bowlers?: number;
+  min_all_rounders?: number;
+  min_wicket_keepers?: number;
+  /** Minimum players from each match team side (home / away) */
+  min_per_team?: number;
+}
+
+export interface DailyContestTeam {
+  id: string;
+  room_id: string;
+  profile_id: string;
+  /** References fantasy_tour_fixtures.match_id */
+  match_id: number;
+  selected_players: number[];
+  /** null = disabled; player_id when C/VC mode is on */
+  captain_id: number | null;
+  vice_captain_id: number | null;
+  created_at: string;
+  updated_at: string;
+  // Joined field from useDailyContestTeams
+  profiles?: { display_name: string | null; avatar_url: string | null };
 }

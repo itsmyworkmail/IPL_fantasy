@@ -40,18 +40,11 @@ export function useFixtures(): UseFixturesReturn {
     setError(null);
     isFetchingRef.current = true;
 
-    // Per-request AbortController only for the timeout scenario
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
     try {
       const { data, error: supabaseError } = await supabase
         .from('fantasy_tour_fixtures')
         .select('*')
-        .order('match_datetime', { ascending: true })
-        .abortSignal(controller.signal);
-
-      clearTimeout(timeoutId);
+        .order('match_datetime', { ascending: true });
 
       if (supabaseError) throw new Error(supabaseError.message);
       if (data) {
@@ -60,16 +53,14 @@ export function useFixtures(): UseFixturesReturn {
         setFixtures(cachedFixtures);
       }
     } catch (err: unknown) {
-      clearTimeout(timeoutId);
-      // AbortError is expected on timeout — log quietly, never surface to the UI
+      // AbortError is benign — can still occur from browser navigation; silence it
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log('Fetch fixtures timed out or aborted — will retry on next focus.');
+        console.log('Fixtures fetch aborted — will retry on next focus.');
         return;
       }
       console.error('Failed to fetch fixtures:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch fixtures');
     } finally {
-      clearTimeout(timeoutId);
       isFetchingRef.current = false;
       setLoading(false);
     }

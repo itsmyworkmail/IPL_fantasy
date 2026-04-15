@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { formatSkillName } from '@/utils/formatters';
 import { UserMinus, Trash2, Eye, BadgeInfo, Crown, LogOut, Copy, Check, ChevronDown, Lock, MoreVertical, ShieldCheck, Pen, ArrowLeft, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { RoomParticipant } from '@/types';
+import { DailyContestRoom } from '@/components/DailyContestRoom';
 
 // Official IPL team colors (same as My Team page)
 const TEAM_COLOR: Record<string, string> = {
@@ -295,6 +296,36 @@ export default function ContestDetailsPage({ params }: { params: Promise<{ roomI
   // but must NOT override the host's explicit "Modify Teams" setting.
   const isModifyTeams = isModifyTeamsRaw;
   const allowDuplicates = settings.allow_duplicates !== false;
+
+  // ── Daily Contest: hand off to dedicated component  ──────────────────────
+  if ((settings.contest_type as string) === 'daily' && activeRoom && user) {
+    return (
+      <DailyContestRoom
+        roomId={roomId}
+        activeRoom={activeRoom}
+        participants={participants}
+        currentUserId={user.id}
+        isHost={isHost}
+        updateRoom={updateRoom}
+        onLeave={async () => {
+          await leaveRoom(roomId);
+          router.push('/contests');
+        }}
+        onDelete={async () => {
+          await deleteRoom(roomId);
+          router.push('/contests');
+        }}
+        onKick={(profileId) => {
+          setParticipants(prev => prev.filter(p => p.profile_id !== profileId));
+          removeParticipant(roomId, profileId)
+            .then(() => toast.success('Participant removed.'))
+            .catch(() => { fetchParticipants(true); toast.error('Failed to remove.'); });
+        }}
+      />
+    );
+  }
+  // ── End Daily Contest guard ──────────────────────────────────────────────
+
 
   // Calculate scores for participants using correct reference points based on lock status
   const participantsWithScores = participants.map(p => {
