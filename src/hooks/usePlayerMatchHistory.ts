@@ -201,6 +201,15 @@ export function usePlayerMatchHistory(
       });
 
     } catch (err: unknown) {
+      // Supabase internally uses the Web Locks API with the 'steal' option for
+      // request deduplication. When a second concurrent fetch is made, the first
+      // is cancelled with an AbortError. This is expected behaviour — not a real
+      // error — so swallow it silently instead of polluting the console.
+      const isAbort =
+        (err instanceof Error && err.name === 'AbortError') ||
+        (typeof err === 'object' && err !== null && (err as Record<string, unknown>).name === 'AbortError') ||
+        (typeof err === 'string' && err.includes('AbortError'));
+      if (isAbort) return;
       console.error('Failed to fetch player match history:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch match history');
     } finally {

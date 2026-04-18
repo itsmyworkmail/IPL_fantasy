@@ -360,7 +360,7 @@ export default function MyTeamPage() {
                       <th key={n} className="px-3 py-4 font-bold text-center whitespace-nowrap">M{n}</th>
                     ))
                   )}
-                  <th className="px-6 py-4 font-bold text-center text-indigo-400">Total</th>
+                  <th className="px-6 py-4 font-bold text-center text-indigo-400 sticky right-0 bg-surface-container-low z-10">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -376,7 +376,7 @@ export default function MyTeamPage() {
                           <div className="h-4 w-8 bg-surface-container-high rounded animate-pulse mx-auto" />
                         </td>
                       ))}
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-6 py-4 text-center sticky right-0 bg-[#0f1829] z-10">
                         <div className="h-4 w-10 bg-surface-container-high rounded animate-pulse mx-auto" />
                       </td>
                     </tr>
@@ -430,7 +430,7 @@ export default function MyTeamPage() {
                         );
                       })}
                       {/* Total — sum of match points (same source as M1/M2 columns) */}
-                      <td className="px-6 py-4 text-center font-headline font-black text-tertiary">{(playerTotals.get(player.player_id) ?? 0).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-center font-headline font-black text-tertiary sticky right-0 bg-[#0f1829] group-hover:bg-[#151f35] transition-colors z-10">{(playerTotals.get(player.player_id) ?? 0).toLocaleString()}</td>
                     </tr>
                   );
                 })}
@@ -632,95 +632,106 @@ export default function MyTeamPage() {
           </div>
         )}
 
-        {/* ── Player Match History Table (single outer horizontal scroll) ── */}
+        {/* ── Player Match History Table — single scroll container, sticky Name + Total ── */}
         <div
           className="rounded-2xl overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.03)' }}
         >
           <div className="overflow-x-auto">
-          <div style={{ minWidth: `${140 + matchCols.length * 32 + 48 + 12}px` }}>
-          {/* Table header */}
-          <div className="flex items-center px-3 py-2.5 border-b border-white/5 gap-1">
-            <div className="w-[140px] flex-shrink-0 text-[8px] font-black uppercase tracking-widest text-slate-500">Player</div>
-            <div className="flex gap-1">
-              {historyLoading && matchCols.length === 0 ? (
-                <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 px-2">Loading...</div>
-              ) : matchCols.map(n => (
-                <div key={n} className="w-8 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 flex-shrink-0">M{n}</div>
-              ))}
-            </div>
-            <div className="w-12 text-right text-[8px] font-black uppercase tracking-widest text-primary flex-shrink-0">Total</div>
+            <table
+              className="w-full text-left border-collapse"
+              style={{ minWidth: `${120 + matchCols.length * 36 + 52}px` }}
+            >
+              <thead>
+                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <th className="px-3 py-2.5 text-[8px] font-black uppercase tracking-widest text-slate-500 sticky left-0 z-20 min-w-[120px]"
+                    style={{ background: 'rgba(15,24,41,1)' }}>
+                    Player
+                  </th>
+                  {historyLoading && matchCols.length === 0 ? (
+                    <th className="px-3 py-2.5 text-[8px] font-black uppercase tracking-widest text-slate-600">Loading…</th>
+                  ) : matchCols.map(n => (
+                    <th key={n} className="w-9 py-2.5 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">M{n}</th>
+                  ))}
+                  <th className="px-3 py-2.5 text-[8px] font-black uppercase tracking-widest text-primary text-right sticky right-0 z-20 min-w-[44px]"
+                    style={{ background: 'rgba(15,24,41,1)' }}>
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {isShellLoading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-3 py-3 sticky left-0 z-10" style={{ background: 'rgba(15,24,41,1)' }}>
+                        <div className="h-3 bg-surface-container-high rounded w-20 mb-1" />
+                        <div className="h-2.5 bg-surface-container-high rounded w-14" />
+                      </td>
+                      {[...Array(4)].map((_, j) => (
+                        <td key={j} className="py-3 text-center">
+                          <div className="h-3 bg-surface-container-high rounded w-6 mx-auto" />
+                        </td>
+                      ))}
+                      <td className="px-3 py-3 sticky right-0 z-10" style={{ background: 'rgba(15,24,41,1)' }}>
+                        <div className="h-3 bg-surface-container-high rounded w-8 ml-auto" />
+                      </td>
+                    </tr>
+                  ))
+                ) : sortedSquad.length === 0 ? (
+                  <tr>
+                    <td colSpan={matchCols.length + 2} className="p-8 text-center text-slate-500 text-xs">
+                      {teams.length === 0 ? 'Create a team to start drafting.' : 'Search above to add players.'}
+                    </td>
+                  </tr>
+                ) : sortedSquad.map((player: GamedayPlayer, rowIdx) => {
+                  const teamCfg = TEAM_CONFIG[player.team_short_name];
+                  const relPts = getRelativeMatchPoints(player, playedTeamSchedule, playerHistory);
+                  const rowBg = rowIdx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent';
+                  const stickyBg = rowIdx % 2 === 0 ? 'rgb(17,24,39)' : 'rgb(15,24,41)';
+                  return (
+                    <tr key={player.player_id} className="hover:bg-white/5 transition-colors group">
+                      {/* Sticky player column */}
+                      <td className="px-3 py-3 sticky left-0 z-10 transition-colors"
+                        style={{ background: stickyBg }}>
+                        <div className="flex items-center gap-1">
+                          <div>
+                            <p className="text-xs font-headline font-bold text-on-surface truncate max-w-[100px]">{player.name}</p>
+                            <p className="text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate"
+                              style={{ color: teamCfg?.color || '#64748b' }}>
+                              {player.team_short_name} · {formatSkillName(player.skill_name)}
+                            </p>
+                          </div>
+                          {isEditingSquad && (
+                            <button onClick={() => handleToggle(player)} className="text-red-400 flex-shrink-0 ml-1">
+                              <MinusCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      {/* Scrollable match point columns */}
+                      {visibleMatchCols.map(n => {
+                        const pts = relPts[n - 1];
+                        const hasPlayed = pts !== undefined;
+                        return (
+                          <td key={n} className="w-9 py-3 text-center text-[10px] font-headline font-bold"
+                            style={{ background: rowBg }}>
+                            {hasPlayed
+                              ? <span className={pts === 0 ? 'text-slate-600' : 'text-on-surface'}>{pts}</span>
+                              : <span className="text-slate-700">–</span>}
+                          </td>
+                        );
+                      })}
+                      {/* Sticky total column */}
+                      <td className="px-3 py-3 text-right font-headline font-black text-tertiary text-xs sticky right-0 z-10 transition-colors"
+                        style={{ background: stickyBg }}>
+                        {(playerTotals.get(player.player_id) ?? 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          {/* Table rows */}
-          {isShellLoading ? (
-            [...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-3 border-b border-white/5">
-                <div className="w-[140px] space-y-1">
-                  <div className="h-3 bg-surface-container-high rounded animate-pulse w-24" />
-                  <div className="h-2.5 bg-surface-container-high rounded animate-pulse w-16" />
-                </div>
-                <div className="flex-1 flex gap-1">
-                  {[...Array(4)].map((_, j) => <div key={j} className="w-8 h-3 bg-surface-container-high rounded animate-pulse flex-shrink-0" />)}
-                </div>
-                <div className="w-12 h-3 bg-surface-container-high rounded animate-pulse" />
-              </div>
-            ))
-          ) : sortedSquad.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
-              <p className="text-xs">
-                {teams.length === 0 ? 'Create a team to start drafting.' : 'Search above to add players.'}
-              </p>
-            </div>
-          ) : sortedSquad.map((player: GamedayPlayer, rowIdx) => {
-            const teamCfg = TEAM_CONFIG[player.team_short_name];
-            const relPts = getRelativeMatchPoints(player, playedTeamSchedule, playerHistory);
-            return (
-              <div
-                key={player.player_id}
-                className="flex items-center gap-1 px-3 py-3"
-                style={{ background: rowIdx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
-              >
-                {/* Sticky-ish player name */}
-                <div className="w-[140px] flex-shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-headline font-bold text-on-surface truncate">{player.name}</p>
-                    {isEditingSquad && (
-                      <button onClick={() => handleToggle(player)} className="text-red-400 flex-shrink-0">
-                        <MinusCircle className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate"
-                    style={{ color: teamCfg?.color || '#64748b' }}>
-                    {player.team_short_name} · {formatSkillName(player.skill_name)}
-                  </p>
-                </div>
-
-                {/* Match points */}
-                <div className="flex gap-1">
-                  {matchCols.map((n) => {
-                    const pts = relPts[n - 1];
-                    const hasPlayed = pts !== undefined;
-                    return (
-                      <div key={n} className="w-8 text-center text-[10px] font-headline font-bold flex-shrink-0">
-                        {hasPlayed
-                          ? <span className={pts === 0 ? 'text-slate-600' : 'text-on-surface'}>{pts}</span>
-                          : <span className="text-slate-700">–</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Total */}
-                <div className="w-12 text-right font-headline font-black text-tertiary text-sm flex-shrink-0">
-                  {player.overall_points}
-                </div>
-              </div>
-            );
-          })}
-          </div>{/* /min-width */}
-          </div>{/* /overflow-x-auto */}
         </div>
       </div>
     </div>

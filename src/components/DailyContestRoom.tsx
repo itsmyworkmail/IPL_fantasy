@@ -40,6 +40,37 @@ function ensureUTC(dt: string): string {
   return /Z|[+-]\d{2}:?\d{2}$/.test(dt) ? dt : dt + 'Z';
 }
 
+/**
+ * Fetch gameday players for specific gameday IDs.
+ * Supabase's default `select('*')` is capped at 1 000 rows — as the season
+ * progresses (280 players × N matches) older gameday data gets silently
+ * truncated.  This helper pages through all results for only the gameday IDs
+ * we actually need.
+ */
+async function fetchGamedayPlayersByIds(gamedayIds: number[]): Promise<GamedayPlayer[]> {
+  if (gamedayIds.length === 0) return [];
+  const all: GamedayPlayer[] = [];
+  const PAGE = 1000;
+  // Batch gameday IDs to keep URL length manageable
+  for (let i = 0; i < gamedayIds.length; i += 10) {
+    const batch = gamedayIds.slice(i, i + 10);
+    let from = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { data, error } = await supabase
+        .from('fantasy_gameday_players')
+        .select('*')
+        .in('gameday_id', batch)
+        .range(from, from + PAGE - 1);
+      if (error) { console.error('fetchGamedayPlayersByIds error:', error.message); break; }
+      if (data) all.push(...(data as GamedayPlayer[]));
+      if (!data || data.length < PAGE) break; // last page
+      from += PAGE;
+    }
+  }
+  return all;
+}
+
 function fmtCountdown(dt: string): string {
   const ms = new Date(ensureUTC(dt)).getTime() - Date.now();
   if (ms <= 0) return 'Started';
@@ -184,10 +215,10 @@ export function DailyContestRoom({
 
   const [gamedayPlayers, setGamedayPlayers] = useState<GamedayPlayer[]>([]);
   useEffect(() => {
-    supabase.from('fantasy_gameday_players').select('*').then(({ data }) => {
-      if (data) setGamedayPlayers(data as GamedayPlayer[]);
-    });
-  }, []);
+    if (fixtures.length === 0) return;
+    const gamedayIds = [...new Set(fixtures.map(f => f.tour_gameday_id))];
+    fetchGamedayPlayersByIds(gamedayIds).then(setGamedayPlayers);
+  }, [fixtures]);
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [mobileTab, setMobileTab] = useState<'leaderboard' | 'team' | 'settings'>('leaderboard');
@@ -934,7 +965,12 @@ export function DailyContestRoom({
         <div className="md:hidden fixed inset-0 z-50 flex flex-col"
           style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) setViewingProfileId(null); }}>
-          <div className="mt-auto w-full bg-surface rounded-t-2xl border-t border-white/10 max-h-[85vh] flex flex-col">
+          {/* Grid layout: row 1 = header (auto), row 2 = scroll body (1fr).
+              Using grid instead of flex-col avoids the mobile WebKit bug where
+              flex-1 + min-h-0 inside a max-h parent doesn't constrain the
+              scrollable child height, making overflow-y-auto non-functional. */}
+          <div className="mt-auto w-full bg-surface rounded-t-2xl border-t border-white/10 overflow-hidden"
+            style={{ display: 'grid', gridTemplateRows: 'auto 1fr', maxHeight: '80vh' }}>
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/8">
               <div>
                 <p className="font-bold text-white text-sm">
@@ -947,7 +983,7 @@ export function DailyContestRoom({
                 <X size={14} className="text-slate-400" />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-3">
+            <div className="overflow-y-auto p-4 space-y-3">
               {/* Switch participant picker — mobile */}
               {leaderboard.length > 1 && (
                 <div className="pb-2 overflow-x-auto hide-scrollbar flex gap-1.5">
