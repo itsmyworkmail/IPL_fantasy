@@ -6,7 +6,7 @@ import { useTeam } from '@/hooks/useTeam';
 import { useFantasyData } from '@/hooks/useFantasyData';
 import { usePlayerMatchHistory, getRelativeMatchPoints } from '@/hooks/usePlayerMatchHistory';
 import { GamedayPlayer, Team } from '@/types';
-import { Search, Plus, Trash2, Edit2, Check, AlertCircle, UserSearch, MinusCircle, Eye } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Check, AlertCircle, UserSearch, MinusCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatSkillName } from '@/utils/formatters';
 
 // Official IPL team colors
@@ -69,8 +69,17 @@ export default function MyTeamPage() {
   // isLoading = true on cold first-load only (no cached data yet)
   const isShellLoading = (teamLoading && teams.length === 0) || (playersLoading && players.length === 0);
 
-  const totalPoints = mySquad.reduce((sum, p) => sum + p.overall_points, 0);
-  const sortedSquad = [...mySquad].sort((a, b) => b.overall_points - a.overall_points);
+  // Compute per-player totals from the same source as the match columns
+  // (fantasy_gameday_players via usePlayerMatchHistory) so they stay consistent.
+  const playerTotals = new Map<number, number>();
+  for (const p of mySquad) {
+    const relPts = getRelativeMatchPoints(p, playedTeamSchedule, playerHistory);
+    playerTotals.set(p.player_id, relPts.reduce((s, v) => s + (v ?? 0), 0));
+  }
+  const totalPoints = [...playerTotals.values()].reduce((s, v) => s + v, 0);
+  const sortedSquad = [...mySquad].sort(
+    (a, b) => (playerTotals.get(b.player_id) ?? 0) - (playerTotals.get(a.player_id) ?? 0)
+  );
 
   // Franchise distribution
   const teamCounts: Record<string, number> = {};
@@ -96,6 +105,14 @@ export default function MyTeamPage() {
 
   // Match column headers: M1, M2, ... up to maxMatchCount
   const matchCols = Array.from({ length: maxMatchCount }, (_, i) => i + 1);
+
+  // Desktop column navigation
+  const VISIBLE_COLS = 8;
+  const [colOffset, setColOffset] = useState(0);
+  const visibleMatchCols = matchCols.slice(colOffset, colOffset + VISIBLE_COLS);
+  const canShiftLeft = colOffset > 0;
+  const canShiftRight = colOffset + VISIBLE_COLS < matchCols.length;
+
 
   return (
     <div className="max-w-[1400px] mx-auto w-full">
@@ -311,10 +328,27 @@ export default function MyTeamPage() {
           )}
 
           {/* ─── Dynamic Match Table ─── */}
+          {matchCols.length > VISIBLE_COLS && (
+            <div className="px-6 py-2 flex items-center justify-between bg-surface-container-highest/30 border-b border-white/5">
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                Matches {colOffset + 1}–{Math.min(colOffset + VISIBLE_COLS, matchCols.length)} of {matchCols.length}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button disabled={!canShiftLeft} onClick={() => setColOffset(o => Math.max(0, o - 1))}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  <ChevronLeft size={13} />
+                </button>
+                <button disabled={!canShiftRight} onClick={() => setColOffset(o => o + 1)}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table
               className="w-full text-left"
-              style={{ minWidth: `${Math.max(500, 240 + matchCols.length * 64)}px` }}
+              style={{ minWidth: `${Math.max(500, 240 + visibleMatchCols.length * 64)}px` }}
             >
               <thead>
                 <tr className="text-slate-500 text-[10px] uppercase tracking-widest border-b border-white/5 bg-surface-container-low">
@@ -322,7 +356,7 @@ export default function MyTeamPage() {
                   {historyLoading && matchCols.length === 0 ? (
                     <th className="px-6 py-4 font-bold text-center text-slate-500">Loading...</th>
                   ) : (
-                    matchCols.map(n => (
+                    visibleMatchCols.map(n => (
                       <th key={n} className="px-3 py-4 font-bold text-center whitespace-nowrap">M{n}</th>
                     ))
                   )}
@@ -349,7 +383,7 @@ export default function MyTeamPage() {
                   ))
                 ) : sortedSquad.length === 0 ? (
                   <tr>
-                    <td colSpan={matchCols.length + 2} className="px-6 py-16 text-center text-slate-500">
+                    <td colSpan={visibleMatchCols.length + 2} className="px-6 py-16 text-center text-slate-500">
                       {teams.length === 0
                         ? <div className="flex flex-col items-center"><AlertCircle className="w-10 h-10 opacity-30 mb-3" />Create a new team to begin drafting.</div>
                         : <div className="flex flex-col items-center"><UserSearch className="w-10 h-10 opacity-30 mb-3" />Use the search bar above to add players.</div>}
@@ -382,8 +416,8 @@ export default function MyTeamPage() {
                           </div>
                         </div>
                       </td>
-                      {/* Relative match columns */}
-                      {matchCols.map((n) => {
+                      {/* Relative match columns (visible window) */}
+                      {visibleMatchCols.map((n) => {
                         const pts = relPts[n - 1];
                         const hasPlayed = pts !== undefined;
                         return (
@@ -395,8 +429,8 @@ export default function MyTeamPage() {
                           </td>
                         );
                       })}
-                      {/* Total */}
-                      <td className="px-6 py-4 text-center font-headline font-black text-tertiary">{player.overall_points.toLocaleString()}</td>
+                      {/* Total — sum of match points (same source as M1/M2 columns) */}
+                      <td className="px-6 py-4 text-center font-headline font-black text-tertiary">{(playerTotals.get(player.player_id) ?? 0).toLocaleString()}</td>
                     </tr>
                   );
                 })}
@@ -598,22 +632,22 @@ export default function MyTeamPage() {
           </div>
         )}
 
-        {/* ── Player Match History Table (horizontally scrollable, up to M14) ── */}
+        {/* ── Player Match History Table (single outer horizontal scroll) ── */}
         <div
           className="rounded-2xl overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.03)' }}
         >
+          <div className="overflow-x-auto">
+          <div style={{ minWidth: `${140 + matchCols.length * 32 + 48 + 12}px` }}>
           {/* Table header */}
           <div className="flex items-center px-3 py-2.5 border-b border-white/5 gap-1">
             <div className="w-[140px] flex-shrink-0 text-[8px] font-black uppercase tracking-widest text-slate-500">Player</div>
-            <div className="flex-1 overflow-x-auto hide-scrollbar">
-              <div className="flex gap-1 min-w-max">
-                {historyLoading && matchCols.length === 0 ? (
-                  <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 px-2">Loading...</div>
-                ) : matchCols.map(n => (
-                  <div key={n} className="w-8 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 flex-shrink-0">M{n}</div>
-                ))}
-              </div>
+            <div className="flex gap-1">
+              {historyLoading && matchCols.length === 0 ? (
+                <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 px-2">Loading...</div>
+              ) : matchCols.map(n => (
+                <div key={n} className="w-8 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 flex-shrink-0">M{n}</div>
+              ))}
             </div>
             <div className="w-12 text-right text-[8px] font-black uppercase tracking-widest text-primary flex-shrink-0">Total</div>
           </div>
@@ -663,21 +697,19 @@ export default function MyTeamPage() {
                   </p>
                 </div>
 
-                {/* Match points — scrollable */}
-                <div className="flex-1 overflow-x-auto hide-scrollbar">
-                  <div className="flex gap-1 min-w-max">
-                    {matchCols.map((n) => {
-                      const pts = relPts[n - 1];
-                      const hasPlayed = pts !== undefined;
-                      return (
-                        <div key={n} className="w-8 text-center text-[10px] font-headline font-bold flex-shrink-0">
-                          {hasPlayed
-                            ? <span className={pts === 0 ? 'text-slate-600' : 'text-on-surface'}>{pts}</span>
-                            : <span className="text-slate-700">–</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
+                {/* Match points */}
+                <div className="flex gap-1">
+                  {matchCols.map((n) => {
+                    const pts = relPts[n - 1];
+                    const hasPlayed = pts !== undefined;
+                    return (
+                      <div key={n} className="w-8 text-center text-[10px] font-headline font-bold flex-shrink-0">
+                        {hasPlayed
+                          ? <span className={pts === 0 ? 'text-slate-600' : 'text-on-surface'}>{pts}</span>
+                          : <span className="text-slate-700">–</span>}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Total */}
@@ -687,6 +719,8 @@ export default function MyTeamPage() {
               </div>
             );
           })}
+          </div>{/* /min-width */}
+          </div>{/* /overflow-x-auto */}
         </div>
       </div>
     </div>

@@ -192,9 +192,11 @@ export function DailyContestRoom({
   // ── UI state ───────────────────────────────────────────────────────────────
   const [mobileTab, setMobileTab] = useState<'leaderboard' | 'team' | 'settings'>('leaderboard');
   const [makeMatchId, setMakeMatchId] = useState<number | null>(null);
-  const [sel, setSel] = useState<Set<number>>(new Set());
-  const [captainId, setCaptainId] = useState<number | null>(null);
-  const [vcId, setVcId] = useState<number | null>(null);
+  // ── Per-match independent selection state ─────────────────────────────
+  // Each entry: matchId → { sel, captainId, vcId }
+  // This prevents selections from different same-day matches bleeding into each other.
+  type MatchSelState = { sel: Set<number>; captainId: number | null; vcId: number | null };
+  const [perMatchState, setPerMatchState] = useState<Map<number, MatchSelState>>(new Map());
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [viewingProfileId, setViewingProfileId] = useState<string | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -235,35 +237,48 @@ export function DailyContestRoom({
     });
   }, [activeMatches]);
 
-  // Track which makeMatchId's selection has been initialised from DB to avoid
-  // overwriting in-progress edits on every myTeams realtime update.
-  const selInitializedForRef = useRef<number | null>(null);
+  // Track which matchIds have been initialised from DB.
+  // Once a matchId is in this set, we don't overwrite edits from realtime updates.
+  const selInitializedRef = useRef<Set<number>>(new Set());
 
-  // When the user switches match, clear the initialised flag so the DB data
-  // will be loaded once when myTeams arrives.
+  // Reset save badge when user switches match tab.
   useEffect(() => {
-    selInitializedForRef.current = null;
-    if (!makeMatchId) { setSel(new Set()); setCaptainId(null); setVcId(null); }
     setSaveState('idle');
   }, [makeMatchId]);
 
-  // Whenever myTeams updates (initial fetch OR realtime INSERT/UPDATE) and we
-  // haven't yet initialised sel for the current match, populate from DB.
-  // This fixes the "selections lost on reload" bug where the makeMatchId effect
-  // ran before fetchTeams() completed.
+  // Populate per-match state from DB for all active matches (runs when myTeams loads
+  // or realtime updates arrive). Once a matchId is in selInitializedRef, its DB
+  // data is already loaded and we preserve any in-progress user edits.
   useEffect(() => {
-    if (!makeMatchId || selInitializedForRef.current === makeMatchId) return;
-    const existing = myTeams.find(t => t.match_id === makeMatchId);
-    if (existing) {
-      setSel(new Set(existing.selected_players));
-      setCaptainId(existing.captain_id);
-      setVcId(existing.vice_captain_id);
-      selInitializedForRef.current = makeMatchId;
+    for (const m of activeMatches) {
+      if (selInitializedRef.current.has(m.match_id)) continue;
+      const existing = myTeams.find(t => t.match_id === m.match_id);
+      if (existing) {
+        selInitializedRef.current.add(m.match_id);
+        setPerMatchState(prev => {
+          if (prev.has(m.match_id)) return prev; // preserve unsaved user edits
+          const next = new Map(prev);
+          next.set(m.match_id, {
+            sel: new Set(existing.selected_players),
+            captainId: existing.captain_id,
+            vcId: existing.vice_captain_id,
+          });
+          return next;
+        });
+      }
+      // If no saved team for this match, we leave selInitializedRef unset so we
+      // retry on next myTeams update (handles async loading order).
     }
-    // Don't clear sel when existing===undefined — user may be building new team
-  }, [makeMatchId, myTeams]);
+  }, [activeMatches, myTeams]);
 
   const selFixture = fixtures.find(f => f.match_id === makeMatchId) ?? null;
+
+  // Derive current-match selection from the per-match Map
+  const _curMatch = makeMatchId ? (perMatchState.get(makeMatchId) ?? { sel: new Set<number>(), captainId: null, vcId: null }) : { sel: new Set<number>(), captainId: null, vcId: null };
+  const sel = _curMatch.sel;
+  const captainId = _curMatch.captainId;
+  const vcId = _curMatch.vcId;
+
   const playerPool = useDailyPlayerPool(selFixture, fixtures, seasonPlayers, gamedayPlayers);
   const validation = validateDailyTeam(sel, playerPool.home, playerPool.away, constraints);
 
@@ -285,32 +300,70 @@ export function DailyContestRoom({
 
   // ── Event handlers ─────────────────────────────────────────────────────────
   const togglePlayer = (pid: number) => {
-    setSel(prev => {
-      const next = new Set(prev);
-      if (next.has(pid)) {
-        next.delete(pid);
-        if (captainId === pid) setCaptainId(null);
-        if (vcId === pid) setVcId(null);
-      } else if (next.size < 11) {
-        next.add(pid);
+    if (!makeMatchId) return;
+    const mid = makeMatchId;
+    setPerMatchState(prev => {
+      const cur = prev.get(mid) ?? { sel: new Set<number>(), captainId: null, vcId: null };
+      const nextSel = new Set(cur.sel);
+      if (nextSel.has(pid)) {
+        nextSel.delete(pid);
+        const next = new Map(prev);
+        next.set(mid, {
+          sel: nextSel,
+          captainId: cur.captainId === pid ? null : cur.captainId,
+          vcId: cur.vcId === pid ? null : cur.vcId,
+        });
+        return next;
+      } else if (nextSel.size < 11) {
+        nextSel.add(pid);
+        const next = new Map(prev);
+        next.set(mid, { ...cur, sel: nextSel });
+        return next;
       }
-      return next;
+      return prev;
     });
     setSaveState('idle');
   };
 
   const tapCaptain = (pid: number) => {
-    if (!sel.has(pid)) return;
-    if (captainId === pid) { setCaptainId(null); return; }
-    if (vcId === pid) setVcId(null);
-    setCaptainId(pid);
+    if (!makeMatchId || !sel.has(pid)) return;
+    const mid = makeMatchId;
+    setPerMatchState(prev => {
+      const cur = prev.get(mid) ?? { sel: new Set<number>(), captainId: null, vcId: null };
+      const next = new Map(prev);
+      if (cur.captainId === pid) {
+        next.set(mid, { ...cur, captainId: null });
+      } else {
+        next.set(mid, { ...cur, captainId: pid, vcId: cur.vcId === pid ? null : cur.vcId });
+      }
+      return next;
+    });
   };
 
   const tapVc = (pid: number) => {
-    if (!sel.has(pid)) return;
-    if (vcId === pid) { setVcId(null); return; }
-    if (captainId === pid) setCaptainId(null);
-    setVcId(pid);
+    if (!makeMatchId || !sel.has(pid)) return;
+    const mid = makeMatchId;
+    setPerMatchState(prev => {
+      const cur = prev.get(mid) ?? { sel: new Set<number>(), captainId: null, vcId: null };
+      const next = new Map(prev);
+      if (cur.vcId === pid) {
+        next.set(mid, { ...cur, vcId: null });
+      } else {
+        next.set(mid, { ...cur, vcId: pid, captainId: cur.captainId === pid ? null : cur.captainId });
+      }
+      return next;
+    });
+  };
+
+  const resetMatch = () => {
+    if (!makeMatchId) return;
+    const mid = makeMatchId;
+    setPerMatchState(prev => {
+      const next = new Map(prev);
+      next.set(mid, { sel: new Set(), captainId: null, vcId: null });
+      return next;
+    });
+    setSaveState('idle');
   };
 
   const handleSave = async () => {
@@ -320,6 +373,7 @@ export function DailyContestRoom({
     }
     try {
       await saveTeam(makeMatchId, [...sel], captainId, vcId);
+      selInitializedRef.current.add(makeMatchId);
       setSaveState('saved');
       toast.success('Team saved! ✓');
     } catch { toast.error("Couldn't save — match may have started."); }
@@ -363,7 +417,8 @@ export function DailyContestRoom({
     activeMatches, makeMatchId, setMakeMatchId: id => setMakeMatchId(id),
     selFixture, playerPool, sel, captainId, vcId, captainVcEnabled,
     validation, isSaving, saveState, fixtures, myTeams, constraints,
-    onToggle: togglePlayer, onCaptain: tapCaptain, onVc: tapVc, onSave: handleSave,
+    onToggle: togglePlayer, onCaptain: tapCaptain, onVc: tapVc,
+    onReset: resetMatch, onSave: handleSave,
   };
 
   const adminProps = {
@@ -631,7 +686,7 @@ export function DailyContestRoom({
                   placeholder="Add a subtitle…" />
               ) : (
                 <div className="flex items-center gap-2 mt-2 group/desc">
-                  <p className="text-on-surface-variant text-sm flex-1">
+                  <p className="text-on-surface-variant text-sm">
                     {activeRoom.description || (isHost ? <span className="text-slate-600 italic">Add a subtitle…</span> : '')}
                   </p>
                   {isHost && (
@@ -791,7 +846,7 @@ export function DailyContestRoom({
               <div className="bg-surface-container-low rounded-2xl min-h-[400px] flex flex-col border border-white/5">
                 <div className="p-6 border-b border-white/5">
                   <h3 className="text-2xl mb-1 font-bold font-headline text-white">Standings</h3>
-                  <p className="text-sm text-on-surface-variant">{leaderboard.length} participants · Live scores</p>
+                  <p className="text-sm text-on-surface-variant">{leaderboard.length} Participants · Live scores</p>
                 </div>
                 <div className="w-full overflow-x-auto">
                   <table className="w-full text-left border-collapse" style={{ minWidth: '400px' }}>
@@ -808,6 +863,7 @@ export function DailyContestRoom({
                         <tr><td colSpan={4} className="p-8 text-center text-slate-500">No participants yet.</td></tr>
                       ) : leaderboard.map((p, idx) => {
                         const isMe = p.profile_id === currentUserId;
+                        const opensUpward = idx >= leaderboard.length - 2;
                         return (
                           <tr key={p.profile_id}
                             className={`transition-colors cursor-pointer ${isMe ? 'bg-indigo-500/[0.08] ring-1 ring-inset ring-indigo-500/20 hover:bg-indigo-500/[0.12]' : 'hover:bg-white/5'}`}
@@ -841,7 +897,7 @@ export function DailyContestRoom({
                                 <MoreVertical size={16} />
                               </button>
                               {desktopMenuOpenId === p.profile_id && (
-                                <div className="absolute right-4 top-full mt-1 z-50 bg-surface-container-high border border-white/10 rounded-xl shadow-2xl py-1 min-w-[140px]"
+                                <div className={`absolute right-4 z-50 bg-surface-container-high border border-white/10 rounded-xl shadow-2xl py-1 min-w-[140px] ${opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}
                                   onClick={e => e.stopPropagation()}>
                                   <button onClick={() => { setViewingProfileId(p.profile_id); setDesktopMenuOpenId(null); }}
                                     className="w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 text-on-surface flex items-center gap-2 transition-colors">
@@ -885,13 +941,13 @@ export function DailyContestRoom({
                   {viewingParticipant.profiles?.display_name ?? 'Player'}
                   {viewingProfileId === currentUserId && <span className="ml-1 text-[9px] text-indigo-400 font-black">YOU</span>}
                 </p>
-                <p className="text-[10px] text-slate-500">Match history</p>
+                <p className="text-[10px] text-slate-500">Last 3 Matches</p>
               </div>
               <button onClick={() => setViewingProfileId(null)} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center">
                 <X size={14} className="text-slate-400" />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 p-4 space-y-3">
+            <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-3">
               {/* Switch participant picker — mobile */}
               {leaderboard.length > 1 && (
                 <div className="pb-2 overflow-x-auto hide-scrollbar flex gap-1.5">
@@ -1105,7 +1161,7 @@ function ViewTeamDetail({
                           ? <div><p className="text-base font-black text-white leading-none">{score}</p><p className="text-[7px] text-slate-600 uppercase">pts</p></div>
                           : <p className="text-[8px] text-slate-700 font-bold uppercase">No team</p>
                       ) : (
-                        <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">Live</span>
+                        <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">Upcoming</span>
                       )}
                     </div>
                   </div>
@@ -1136,10 +1192,10 @@ function ViewTeamDetail({
                               <p className="text-[8px] text-slate-600 truncate">{gp?.team_short_name ?? sp?.team_short_name ?? ''}</p>
                             </div>
                             <div className="text-right flex-shrink-0 w-10">
-                              {isLocked && rawPts !== null ? (
+                              {isLocked ? (
                                 <div>
-                                  <p className="text-[11px] font-bold text-white">{Math.round(dispPts!)}</p>
-                                  {(isC || isVC) && <p className="text-[7px] text-slate-600">{isC ? '2×' : '1.5×'}{Math.round(rawPts)}</p>}
+                                  <p className="text-[11px] font-bold text-white">{rawPts !== null ? Math.round(dispPts!) : 0}</p>
+                                  {(isC || isVC) && rawPts !== null && <p className="text-[7px] text-slate-600">{isC ? '2×' : '1.5×'}{Math.round(rawPts)}</p>}
                                 </div>
                               ) : (
                                 <span className="text-[9px] text-slate-700">—</span>
@@ -1252,10 +1308,10 @@ function MobileMatchSection({ fix, team, gamedayPlayers, seasonPlayers, captainV
                       <p className="text-[8px] text-slate-600">{gp?.team_short_name ?? sp?.team_short_name ?? ''}</p>
                     </div>
                     <div className="text-right flex-shrink-0 w-12">
-                      {isLocked && rawPts !== null ? (
+                      {isLocked ? (
                         <div>
-                          <p className="text-[11px] font-bold text-white">{Math.round(dispPts!)}</p>
-                          {(isC || isVC) && <p className="text-[7px] text-slate-600">{isC ? '2×' : '1.5×'}{Math.round(rawPts)}</p>}
+                          <p className="text-[11px] font-bold text-white">{rawPts !== null ? Math.round(dispPts!) : 0}</p>
+                          {(isC || isVC) && rawPts !== null && <p className="text-[7px] text-slate-600">{isC ? '2×' : '1.5×'}{Math.round(rawPts)}</p>}
                         </div>
                       ) : (
                         <span className="text-[9px] text-slate-700">—</span>
@@ -1345,6 +1401,7 @@ interface MakeTeamProps {
   onToggle: (pid: number) => void;
   onCaptain: (pid: number) => void;
   onVc: (pid: number) => void;
+  onReset: () => void;
   onSave: () => void;
 }
 
@@ -1368,7 +1425,7 @@ function MakeTeamSection({
   activeMatches, selFixture,
   playerPool, sel, captainId, vcId, captainVcEnabled,
   validation, isSaving, saveState, fixtures, myTeams, constraints,
-  onToggle, onCaptain, onVc, onSave,
+  onToggle, onCaptain, onVc, onReset, onSave,
 }: MakeTeamProps) {
 
   // ── Empty / waiting state ──────────────────────────────────────────────────
@@ -1466,7 +1523,7 @@ function MakeTeamSection({
         <div className="flex items-center gap-2 ml-auto">
           {sel.size > 0 && (
             <button
-              onClick={() => { const ids = [...sel]; ids.forEach(pid => onToggle(pid)); }}
+              onClick={onReset}
               className="px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-slate-400 bg-white/[0.06] hover:bg-white/10 border border-white/10 transition-all active:scale-95">
               Reset
             </button>
@@ -1530,39 +1587,15 @@ function MakeTeamSection({
             <div className="overflow-y-auto flex-1 py-0.5" style={{ scrollbarWidth: 'none' }}>
               {pool.length === 0 && <p className="text-center text-slate-700 text-xs py-8">No players</p>}
 
-              {/* LAST XI section */}
-              {pool.some(p => p.isLastMatchXI) && (
-                <>
-                  <div className="px-3 pt-2 pb-0.5 flex items-center gap-2">
-                    <span className="text-[8px] font-black uppercase tracking-[0.15em] text-amber-500/80">Last XI</span>
-                    <div className="flex-1 h-px bg-amber-500/15" />
-                  </div>
-                  {pool.filter(p => p.isLastMatchXI).map(player => (
-                    <PremiumPlayerRow key={player.player_id} player={player} sel={sel}
-                      captainId={captainId} vcId={vcId} captainVcEnabled={captainVcEnabled}
-                      isFull={isFull} accent={accent} isLastXI
-                      onToggle={onToggle} onCaptain={onCaptain} onVc={onVc} />
-                  ))}
-                </>
-              )}
-
-              {/* BENCH / OTHERS section */}
-              {pool.some(p => !p.isLastMatchXI) && (
-                <>
-                  <div className="px-3 pt-2 pb-0.5 flex items-center gap-2">
-                    <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-600">
-                      {pool.some(p => p.isLastMatchXI) ? 'Bench / Others' : 'Squad'}
-                    </span>
-                    <div className="flex-1 h-px bg-white/[0.04]" />
-                  </div>
-                  {pool.filter(p => !p.isLastMatchXI).map(player => (
-                    <PremiumPlayerRow key={player.player_id} player={player} sel={sel}
-                      captainId={captainId} vcId={vcId} captainVcEnabled={captainVcEnabled}
-                      isFull={isFull} accent={accent} isLastXI={false}
-                      onToggle={onToggle} onCaptain={onCaptain} onVc={onVc} />
-                  ))}
-                </>
-              )}
+              {/* Players sorted by descending points — no grouping */}
+              {[...pool]
+                .sort((a, b) => b.overall_points - a.overall_points)
+                .map(player => (
+                  <PremiumPlayerRow key={player.player_id} player={player} sel={sel}
+                    captainId={captainId} vcId={vcId} captainVcEnabled={captainVcEnabled}
+                    isFull={isFull} accent={accent} isLastXI={false}
+                    onToggle={onToggle} onCaptain={onCaptain} onVc={onVc} />
+              ))}
             </div>
           </div>
         ))}
@@ -1728,12 +1761,12 @@ function AdminControlsCard({
           <div className="flex justify-between items-center">
             <p className="font-semibold text-white">Match Limit</p>
             <button type="button"
-              onClick={() => patchNumMatches(numMatches === null ? 70 : null)}
+              onClick={() => patchNumMatches(numMatches === null ? 74 : null)}
               className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all ${numMatches === null ? 'bg-primary/20 text-primary border-primary/40' : 'bg-white/5 text-slate-500 border-white/10'}`}>
               {numMatches === null ? '✓ MAX' : 'Set MAX'}
             </button>
           </div>
-          <input type="range" min={matchesDone || 1} max={70}
+          <input type="range" min={matchesDone || 1} max={74}
             value={numMatches ?? 70}
             onChange={e => patchNumMatches(Number(e.target.value))}
             disabled={numMatches === null}
@@ -1741,7 +1774,7 @@ function AdminControlsCard({
           <div className="flex justify-between text-xs text-on-surface-variant">
             <span>Done: {matchesDone}</span>
             <span className={numMatches === null ? 'text-primary font-bold' : 'text-white font-bold'}>
-              {numMatches === null ? 'Max (70)' : `Limit: ${numMatches}`}
+              {numMatches === null ? 'Max (74)' : `Limit: ${numMatches}`}
             </span>
           </div>
         </div>

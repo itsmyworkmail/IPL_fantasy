@@ -39,8 +39,82 @@ interface TournamentFixture {
   matchstatus?: number;
 }
 
+/**
+ * Syncs the global player roster (overall_points) to the `players` table.
+ * This runs on EVERY scheduled tick (NOT throttled) so that overall_points
+ * stays current between matches — e.g. after a match finishes and the 90-min
+ * grace window closes, the next cron still refreshes cumulative points.
+ */
+async function syncGlobalRoster(env: Env) {
+  console.log('Starting Global Roster Sync (overall_points)...');
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
+  const now = new Date();
+
+  // Use the most recent match that has already started as the gameday reference
+  const { data: latestFixture } = await supabase
+    .from('fantasy_tour_fixtures')
+    .select('tour_gameday_id')
+    .lte('match_datetime', now.toISOString())
+    .order('match_datetime', { ascending: false })
+    .limit(1)
+    .single();
+
+  const globalGamedayId = latestFixture?.tour_gameday_id ?? 1;
+  console.log(`Fetching global roster using latest tourgamedayId=${globalGamedayId}...`);
+
+  const globalRes = await fetch(
+    `https://fantasy.iplt20.com/classic/api/feed/live/gamedayplayers?lang=en&tourgamedayId=${globalGamedayId}`,
+    {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://fantasy.iplt20.com/classic/',
+        'Origin': 'https://fantasy.iplt20.com'
+      }
+    }
+  );
+
+  if (!globalRes.ok) {
+    console.error(`Global roster API returned ${globalRes.status}`);
+    return;
+  }
+
+  const globalData = await globalRes.json() as { Data: { Value: { Players: PlayerRecord[] } } };
+  const globalPlayers = globalData?.Data?.Value?.Players;
+  if (!globalPlayers || !Array.isArray(globalPlayers) || globalPlayers.length === 0) {
+    console.warn('No players found in global roster response');
+    return;
+  }
+
+  const globalRoster = globalPlayers.map((p: PlayerRecord) => ({
+    player_id: p.Id,
+    name: p.Name,
+    short_name: p.ShortName,
+    team_id: p.TeamId,
+    team_name: p.TeamName,
+    team_short_name: p.TeamShortName,
+    skill_name: p.SkillName,
+    skill_id: p.SkillId,
+    overall_points: p.OverallPoints,
+    last_updated_at: new Date().toISOString()
+  }));
+
+  const chunkSize = 200;
+  for (let i = 0; i < globalRoster.length; i += chunkSize) {
+    const chunk = globalRoster.slice(i, i + chunkSize);
+    const { error } = await supabase.from('players').upsert(chunk, { onConflict: 'player_id' });
+    if (error) console.error(`Supabase Upsert Error (Global Roster): ${error.message}`);
+  }
+  console.log(`Successfully synced ${globalRoster.length} players to global roster.`);
+}
+
+/**
+ * Syncs per-match (time-series) player data into `fantasy_gameday_players`.
+ * THROTTLED: only runs during active match windows to conserve resources.
+ */
 async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
-  console.log(`Starting IPL Fantasy Data Sync (Players)... [Manual: ${isManual}]`);
+  console.log(`Starting IPL Fantasy Data Sync (Gameday Players)... [Manual: ${isManual}]`);
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
 
   const now = new Date();
@@ -71,9 +145,11 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
         isAnyMatchActive = true;
         break;
       }
-      // Rule 2: Sync 30m before and safely until 30m after start if status is 0 or empty
+      // Rule 2: Sync from 30m before start until 6 hours after start.
+      //   The 6-hour window covers the full match duration even if match_status
+      //   never gets updated from '0' to '1' (deadlock prevention).
       if (status === '0' || status === '') {
-        if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + THIRTY_MINS)) {
+        if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + SIX_HOURS)) {
           isAnyMatchActive = true;
           break;
         }
@@ -90,66 +166,13 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
     }
   }
 
-  // Throttle automated crons tightly to only work during matches to save resources
+  // Throttle: only proceed if a match is active (or this is a manual call)
   if (!isManual && !isAnyMatchActive) {
-    console.log('No active matches currently. Cron job skipped API fetch to save resources.');
+    console.log('No active matches currently. Gameday sync skipped to save resources.');
     return;
   }
 
-  // 2. Determine dynamically the most recent gameday_id to ensure players have the absolute newest points
-  let globalGamedayId = 1;
-  const { data: latestFixture } = await supabase
-    .from('fantasy_tour_fixtures')
-    .select('tour_gameday_id')
-    .lte('match_datetime', now.toISOString())
-    .order('match_datetime', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (latestFixture && latestFixture.tour_gameday_id) {
-    globalGamedayId = latestFixture.tour_gameday_id;
-  }
-
-  console.log(`Fetching global roster using latest tourgamedayId=${globalGamedayId}...`);
-  const globalRes = await fetch(`https://fantasy.iplt20.com/classic/api/feed/live/gamedayplayers?lang=en&tourgamedayId=${globalGamedayId}`, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0',
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://fantasy.iplt20.com/classic/',
-      'Origin': 'https://fantasy.iplt20.com'
-    }
-  });
-
-  if (globalRes.ok) {
-    const globalData = await globalRes.json() as { Data: { Value: { Players: PlayerRecord[] } } };
-    const globalPlayers = globalData?.Data?.Value?.Players;
-    if (globalPlayers && Array.isArray(globalPlayers) && globalPlayers.length > 0) {
-      const globalRoster = globalPlayers.map((p: PlayerRecord) => ({
-        player_id: p.Id,
-        name: p.Name,
-        short_name: p.ShortName,
-        team_id: p.TeamId,
-        team_name: p.TeamName,
-        team_short_name: p.TeamShortName,
-        skill_name: p.SkillName,
-        skill_id: p.SkillId,
-        overall_points: p.OverallPoints,
-        is_announced: p.IsAnnounced ?? 'NP',
-        last_updated_at: new Date().toISOString()
-      }));
-
-      const chunkSize = 200;
-      for (let i = 0; i < globalRoster.length; i += chunkSize) {
-        const chunk = globalRoster.slice(i, i + chunkSize);
-        const { error } = await supabase.from('players').upsert(chunk, { onConflict: 'player_id' });
-        if (error) console.error(`Supabase Upsert Error (Global Roster): ${error.message}`);
-      }
-      console.log(`Successfully synced ${globalRoster.length} players to global roster.`);
-    }
-  }
-
-  // 3. Sync time-series data for TODAY's fixtures
+  // 2. Sync time-series data for TODAY's fixtures
   if (!fixtures || fixtures.length === 0) {
     console.log('No matches scheduled for yesterday or today. Skipping time-series sync.');
     return;
@@ -165,7 +188,9 @@ async function syncGamedayPlayers(env: Env, isManual: boolean = false) {
     if (status === '1') {
       shouldSyncThisFixture = true;
     } else if (status === '0' || status === '') {
-      if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + THIRTY_MINS)) {
+      // Sync from 30m before start until 6h after — covers full match even if
+      // match_status stuck at '0' (avoids deadlock with throttle check above).
+      if (nowTime >= (matchStartTime - THIRTY_MINS) && nowTime <= (matchStartTime + SIX_HOURS)) {
         shouldSyncThisFixture = true;
       }
     } else if (status === '2') {
@@ -279,6 +304,39 @@ async function syncTourFixtures(env: Env) {
   }));
 
   const chunkSize = 50;
+
+  // ── Pre-cleanup: resolve tour_gameday_id conflicts before upserting ──────────
+  // IPL occasionally reschedules fixtures, swapping match_ids between gamedays.
+  // This creates a circular conflict where neither match_id nor tour_gameday_id
+  // can be used as a single upsert key without hitting one of the two unique
+  // constraints.  The fix: null out tour_gameday_id on any DB row that has
+  // "our" gameday ID but a different match_id (i.e., got rescheduled away).
+  // These are always future matches (no child fantasy_gameday_players rows yet),
+  // so nulling is safe and the main upsert below will set the correct value.
+  const incomingGamedayIds = records.map(r => r.tour_gameday_id).filter(Boolean) as number[];
+  const incomingMatchIds   = records.map(r => r.match_id);
+
+  if (incomingGamedayIds.length > 0) {
+    const { data: conflictingRows } = await supabase
+      .from('fantasy_tour_fixtures')
+      .select('match_id, tour_gameday_id')
+      .in('tour_gameday_id', incomingGamedayIds)
+      .not('match_id', 'in', `(${incomingMatchIds.join(',')})`);
+
+    if (conflictingRows && conflictingRows.length > 0) {
+      console.log(`Resolving ${conflictingRows.length} tour_gameday_id conflict(s) from schedule changes...`);
+      for (const row of conflictingRows) {
+        const { error: clearErr } = await supabase
+          .from('fantasy_tour_fixtures')
+          .update({ tour_gameday_id: null })
+          .eq('match_id', row.match_id);
+        if (clearErr) console.error(`  Could not null tour_gameday_id for match ${row.match_id}:`, clearErr.message);
+        else console.log(`  Cleared tour_gameday_id=${row.tour_gameday_id} from match_id=${row.match_id} (rescheduled)`);
+      }
+    }
+  }
+
+  // ── Main upsert on match_id (canonical PK, now free of gameday conflicts) ──
   for (let i = 0; i < records.length; i += chunkSize) {
     const chunk = records.slice(i, i + chunkSize);
     const { error } = await supabase.from('fantasy_tour_fixtures').upsert(chunk, { onConflict: 'match_id' });
@@ -293,6 +351,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/sync-players') {
       try {
+        await syncGlobalRoster(env);
         await syncGamedayPlayers(env, true);
         return new Response('Players Sync completed successfully!', { status: 200 });
       } catch (e: any) {
@@ -307,20 +366,30 @@ export default {
         return new Response(`Fixtures Sync failed: ${e.message}`, { status: 500 });
       }
     }
-    return new Response('Fantasy Data Sync Worker is running. Try /sync-players or /sync-fixtures.', { status: 200 });
+    if (url.pathname === '/sync-global-roster') {
+      try {
+        await syncGlobalRoster(env);
+        return new Response('Global Roster Sync completed successfully!', { status: 200 });
+      } catch (e: any) {
+        return new Response(`Global Roster Sync failed: ${e.message}`, { status: 500 });
+      }
+    }
+    return new Response(
+      'Fantasy Data Sync Worker is running. Endpoints: /sync-players, /sync-fixtures, /sync-global-roster',
+      { status: 200 }
+    );
   },
 
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     try {
-      if (event.cron === '0 0 * * *') {
-        // Daily run at midnight UTC for a full fixture list refresh
-        await syncTourFixtures(env);
-        await syncGamedayPlayers(env, false);
-      } else {
-        // Every 5-minute run: sync BOTH players AND fixture statuses (for real-time is_live / match_status)
-        await syncTourFixtures(env);
-        await syncGamedayPlayers(env, false);
-      }
+      // Always sync fixtures and global roster (overall_points) on every tick.
+      // The global roster sync is NOT throttled so overall_points stays current
+      // even between matches (after the match window + 90-min grace period closes).
+      await syncTourFixtures(env);
+      await syncGlobalRoster(env);
+
+      // Throttled: only syncs per-match gameday data during active match windows.
+      await syncGamedayPlayers(env, false);
     } catch (e) {
       console.error('Exception during scheduled task:', e);
       throw e;

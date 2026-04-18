@@ -45,14 +45,16 @@ interface MobileLobbyProps {
 function MobileLobby({
   displayMatch, performerMatch, matchName, topPerformers, topPerformersLoading, topPerformersMatchName,
   lobbySquad, lobbyTotalPoints, lobbyTeam, players, filteredPlayers, playersLoading,
-  filterType, setFilterType, searchQuery, setSearchQuery, user, signInWithGoogle, router
-}: MobileLobbyProps) {
+  filterType, setFilterType, searchQuery, setSearchQuery, user, signInWithGoogle, router,
+  isMatchLive,
+}: MobileLobbyProps & { isMatchLive: boolean }) {
   const [squadExpanded, setSquadExpanded] = useState(false);
 
-  const statusLabel = displayMatch?.match_status === '1' ? 'Live'
+  // Use isMatchLive so we correctly show 'Live' even when match_status is stuck at '0'
+  const statusLabel = isMatchLive ? 'Live'
     : displayMatch?.match_status === '2' ? 'Finished'
     : 'Upcoming';
-  const statusColor = displayMatch?.match_status === '1'
+  const statusColor = isMatchLive
     ? 'bg-red-500/15 text-red-400'
     : displayMatch?.match_status === '2'
     ? 'bg-primary/10 text-primary'
@@ -414,7 +416,7 @@ export default function Lobby() {
                   ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                   : 'bg-tertiary-container/20 text-tertiary-fixed-dim border-tertiary-fixed-dim/20'
               }`}>
-                {displayMatch?.match_status === '1' ? 'Live' : displayMatch?.match_status === '2' ? 'Finished' : 'Upcoming'}
+                {isMatchLive ? 'Live' : displayMatch?.match_status === '2' ? 'Finished' : 'Upcoming'}
               </span>
               <h2 className="text-3xl font-headline font-black tracking-tight text-on-surface">{matchName}</h2>
             </div>
@@ -604,6 +606,7 @@ export default function Lobby() {
         user={user}
         signInWithGoogle={signInWithGoogle}
         router={router}
+        isMatchLive={isMatchLive}
       />
     </div>
   );

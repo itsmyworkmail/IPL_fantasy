@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { GamedayPlayer } from '@/types';
 
@@ -23,6 +23,9 @@ export function useTopPerformers(gamedayId: number | null, limit = 5): UseTopPer
   const [loading, setLoading] = useState(!hasCached && gamedayId !== null);
   const [error, setError] = useState<string | null>(null);
 
+  // Track in-flight requests so stale results are never applied after cancellation
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchTopPerformers = useCallback(async (isBackground = false) => {
     if (!gamedayId) {
       setTopPerformers([]);
@@ -36,6 +39,11 @@ export function useTopPerformers(gamedayId: number | null, limit = 5): UseTopPer
     // Background fetch: skip entirely if cache is still fresh
     if (isBackground && isFresh) return;
 
+    // Cancel any previous in-flight fetch (prevents stale state updates)
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     // Only show spinner if we have no data at all to display
     if (!isBackground && !entry?.data.length) setLoading(true);
     setError(null);
@@ -48,16 +56,23 @@ export function useTopPerformers(gamedayId: number | null, limit = 5): UseTopPer
         .order('gameday_points', { ascending: false })
         .limit(limit);
 
+      // If this request was aborted (superseded by a newer one), discard result
+      if (controller.signal.aborted) return;
+
       if (supabaseError) throw new Error(supabaseError.message);
 
       const result = (data as GamedayPlayer[]) || [];
       cache.set(cacheKey, { data: result, timestamp: Date.now() });
       setTopPerformers(result);
     } catch (err: unknown) {
+      // AbortError is expected when Supabase's Web Locks API cancels an older
+      // request in favour of a newer one ('steal' option). Silently ignore it —
+      // a superseding request is already in flight and will update state.
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.error('Failed to fetch top performers:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch top performers');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [gamedayId, limit, cacheKey]);
 
@@ -74,6 +89,9 @@ export function useTopPerformers(gamedayId: number | null, limit = 5): UseTopPer
     }
 
     fetchTopPerformers();
+
+    // Abort any in-flight request when gamedayId changes or component unmounts
+    return () => { abortRef.current?.abort(); };
   }, [fetchTopPerformers, cacheKey]);
 
   // Silently refresh when user returns to the tab

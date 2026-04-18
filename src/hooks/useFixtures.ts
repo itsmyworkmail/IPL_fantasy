@@ -92,15 +92,32 @@ export function useFixtures(): UseFixturesReturn {
     : null;
 
   const pastMatches = fixtures.filter(f => f.match_status === '2' || f.match_status === '5');
-
   const lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
 
-  const upcomingMatch = fixtures.find(f => f.match_status === '0' || !f.match_status) || null;
+  const now = new Date();
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
-  const isMatchLive = liveMatch !== null;
-  const displayMatch = liveMatch || upcomingMatch || lastMatch;
-  const performerMatch = liveMatch || lastMatch;
-  const activeGamedayId = (liveMatch || lastMatch)?.tour_gameday_id || null;
+  // "Effectively live": match_status is still '0' but match_datetime passed within 6 hours.
+  // This happens when the sync worker ran late or match_status wasn't updated in the DB yet.
+  const effectiveLiveMatch = !liveMatch
+    ? fixtures.find(f => {
+        if (f.match_status !== '0' && f.match_status !== '' && f.match_status != null) return false;
+        const startedMs = now.getTime() - new Date(f.match_datetime + (f.match_datetime.endsWith('Z') ? '' : 'Z')).getTime();
+        return startedMs >= 0 && startedMs < SIX_HOURS_MS;
+      }) ?? null
+    : null;
+
+  // Matches not yet started (status '0' and match_datetime still in the future)
+  const upcomingMatch = fixtures.find(f => {
+    if (f.match_status !== '0' && f.match_status !== '' && f.match_status != null) return false;
+    return new Date(f.match_datetime + (f.match_datetime.endsWith('Z') ? '' : 'Z')) > now;
+  }) || null;
+
+  const resolvedLive = liveMatch ?? effectiveLiveMatch;
+  const isMatchLive = resolvedLive !== null;
+  const displayMatch = resolvedLive || upcomingMatch || lastMatch;
+  const performerMatch = resolvedLive || lastMatch;
+  const activeGamedayId = (resolvedLive || lastMatch)?.tour_gameday_id || null;
 
   return {
     fixtures, liveMatch, lastMatch, upcomingMatch,
