@@ -4,7 +4,7 @@ import { useFixtures } from '@/hooks/useFixtures';
 import { useTopPerformers } from '@/hooks/useTopPerformers';
 import { useTeam } from '@/hooks/useTeam';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatSkillName } from '@/utils/formatters';
@@ -15,13 +15,264 @@ import type { User } from '@supabase/supabase-js';
 import type { GamedayPlayer } from '@/types';
 
 /* ─────────────────────────────────────────────────────────
+   useLiveScore
+   ─────────────────────────────────────────────────────────
+   - When isMatchLive=true : polls /api/live-score every 15s for live IPL match
+   - When isRecentlyFinished=true : polls every 60s for completed IPL match
+     (shows last score for up to 4 hours after match ends)
+   - Polls are stopped and state cleared when neither condition is met
+   ───────────────────────────────────────────────────────── */
+interface LiveMatch {
+  t_one: string; t_one_s: string;
+  t_two: string; t_two_s: string;
+  m_status: string; status: string; spec: string;
+}
+function useLiveScore(isMatchLive: boolean, isRecentlyFinished: boolean) {
+  const [match, setMatch] = useState<LiveMatch | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const active = isMatchLive || isRecentlyFinished;
+
+  const fetch_ = useCallback(async () => {
+    try {
+      const res = await fetch('/api/live-score');
+      if (!res.ok) return;
+      const json = await res.json() as { live: LiveMatch[]; completed: LiveMatch[] };
+      // Prefer a genuinely live match; fall back to most recent completed one
+      const found = json.live?.[0] ?? json.completed?.[0] ?? null;
+      setMatch(found);
+    } catch { /* network blip — keep last value */ }
+  }, []);
+
+  useEffect(() => {
+    if (!active) { setMatch(null); return; }
+    fetch_();
+    // Poll faster when live (15s), slower when just finished (60s)
+    const interval = isMatchLive ? 15_000 : 60_000;
+    timerRef.current = setInterval(fetch_, interval);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [active, isMatchLive, fetch_]);
+
+  return match;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Score string helpers
+   "159/6(20.0)" or "159-6 (20.0)" → { runs: "159", wkts: "6", overs: "20.0" }
+   ───────────────────────────────────────────────────────── */
+function parseScore(raw: string | undefined): { runs: string; wkts: string; overs: string } | null {
+  if (!raw) return null;
+  // e.g. "159/6(20.0)" or "0/0(0)"
+  const m = raw.match(/^(\d+)[/\-](\d+)\(?([\d.]+)\)?/);
+  if (!m) return null;
+  if (m[1] === '0' && m[2] === '0') return null; // no data yet
+  return { runs: m[1], wkts: m[2], overs: m[3] };
+}
+
+/* ─────────────────────────────────────────────────────────
+   MatchHeader — self-contained premium scoreboard card
+   Handles all states: Live • Recently Finished • Upcoming
+   Integrates status pill, scores, result text, and CTA button.
+   ───────────────────────────────────────────────────────── */
+interface MatchHeaderProps {
+  isMatchLive: boolean;
+  isRecentlyFinished: boolean;
+  liveScore: LiveMatch | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  matchFixture: any; // lastMatch when recently finished, displayMatch otherwise
+  user: User | null;
+  signInWithGoogle: () => void;
+  router: AppRouterInstance;
+}
+
+function MatchHeader({ isMatchLive, isRecentlyFinished, liveScore, matchFixture, user, signInWithGoogle, router }: MatchHeaderProps) {
+  // ── Score display order: t_one batted first (LEFT), t_two batted second (RIGHT) ──
+  // Scores are always shown in batting order — no swapping needed.
+  const s1 = parseScore(liveScore?.t_one_s); // left  (batted 1st)
+  const s2 = parseScore(liveScore?.t_two_s); // right (batted 2nd)
+
+  // ── Display names: prefer fixture names (correct short codes) ──────────────
+  // API may abbreviate differently (RAJ vs RR, KXIP vs PBKS).
+  // We check if apiT1/apiT2 match either fixture team name (case-insensitive).
+  // Matched teams use the fixture's clean short name; unmatched fall back to the API string.
+  const homeTeam = matchFixture?.home_team_short_name ?? '';
+  const awayTeam = matchFixture?.away_team_short_name ?? '';
+  let t1 = liveScore?.t_one ?? homeTeam; // left display name
+  let t2 = liveScore?.t_two ?? awayTeam; // right display name
+
+  if (liveScore && (homeTeam || awayTeam)) {
+    const apiT1 = liveScore.t_one.toLowerCase();
+    const apiT2 = liveScore.t_two.toLowerCase();
+    const homeLower = homeTeam.toLowerCase();
+    const awayLower = awayTeam.toLowerCase();
+
+    // Direct match: t_one abbreviation matches a fixture team
+    let t1Resolved = false;
+    if (apiT1 === homeLower)      { t1 = homeTeam; t1Resolved = true; }
+    else if (apiT1 === awayLower) { t1 = awayTeam; t1Resolved = true; }
+
+    // Direct match: t_two abbreviation matches a fixture team
+    let t2Resolved = false;
+    if (apiT2 === awayLower)      { t2 = awayTeam; t2Resolved = true; }
+    else if (apiT2 === homeLower) { t2 = homeTeam; t2Resolved = true; }
+
+    // Cross-deduction by elimination:
+    // If one side matched, the other must be the remaining fixture team.
+    // e.g. apiT2="lsg" matched awayTeam → apiT1="raj" (unknown) must be homeTeam (RR).
+    if (!t1Resolved && t2Resolved) t1 = (t2 === awayTeam) ? homeTeam : awayTeam;
+    if (!t2Resolved && t1Resolved) t2 = (t1 === homeTeam) ? awayTeam : homeTeam;
+  }
+
+
+  const hasScore = s1 !== null || s2 !== null;
+  const resultText = liveScore?.m_status ?? null;
+  const spec = liveScore?.spec ?? matchFixture?.match_name ?? '';
+
+  const isFinished = isRecentlyFinished
+    || matchFixture?.match_status === '2'
+    || matchFixture?.match_status === '5';
+  const statusLabel = isMatchLive ? 'Live' : isFinished ? 'Finished' : 'Upcoming';
+  const statusColor = isMatchLive
+    ? 'bg-red-500/10 text-red-400 border-red-500/20'
+    : isFinished
+    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+    : 'bg-tertiary/10 text-tertiary border-tertiary/20';
+
+  return (
+    <div
+      className="w-full rounded-2xl overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, rgba(99,102,241,0.14) 0%, rgba(126,81,255,0.07) 55%, rgba(15,24,41,0.85) 100%)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 3px rgba(0,0,0,0.4)',
+        border: '1px solid rgba(255,255,255,0.07)',
+      }}
+    >
+      {/* ─ Top bar: status + match label + CTA ──────────────────────── */}
+      <div className="flex items-center justify-between px-4 md:px-6 py-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black tracking-[0.15em] uppercase border flex-shrink-0 ${statusColor}`}>
+            {isMatchLive && <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />}
+            {statusLabel}
+          </span>
+          {spec && (
+            <span className="text-[10px] text-slate-500 font-medium truncate hidden xs:block">{spec}</span>
+          )}
+        </div>
+        <button
+          onClick={() => !user ? signInWithGoogle() : router.push('/my-team')}
+          className="flex-shrink-0 ml-3 text-[9px] md:text-[10px] font-black tracking-[0.12em] uppercase px-3 md:px-5 py-1.5 md:py-2 rounded-xl bg-primary/20 text-primary hover:bg-primary/30 active:scale-95 transition-all cursor-pointer"
+        >
+          {user ? 'My Team →' : 'Create Team'}
+        </button>
+      </div>
+
+      {/* ─ Score section ─────────────────────────────────────────────── */}
+      {/* Inner wrapper constrains max-width on desktop so teams don't sit at far edges */}
+      <div className="px-4 md:px-8 py-5 md:pt-7 md:pb-5">
+        <div className="flex items-center justify-between gap-2 md:gap-6 md:max-w-3xl md:mx-auto">
+
+          {/* Team 1 — left */}
+          <div className="flex items-center gap-2.5 md:gap-4 flex-1 min-w-0">
+            <div className="w-11 h-11 md:w-16 md:h-16 flex-shrink-0 rounded-full bg-white/5 border border-white/10 p-1 md:p-1.5 flex items-center justify-center">
+              {t1 && <img src={`/logos/${t1.toLowerCase()}.png`} alt={t1}
+                className="w-full h-full object-contain drop-shadow-lg"
+                onError={e => { e.currentTarget.style.display = 'none'; }} />}
+            </div>
+            {t1 ? (
+              <div className="min-w-0">
+                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t1}</p>
+                {s1 ? (
+                  <>
+                    <p className="leading-none font-headline font-black text-on-surface">
+                      <span className="text-[22px] md:text-[34px]">{s1.runs}</span>
+                      <span className="text-slate-400 text-sm md:text-xl font-bold">/{s1.wkts}</span>
+                    </p>
+                    <p className="text-[9px] md:text-[10px] text-slate-600 font-medium mt-0.5">({s1.overs} ov)</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-600 font-bold mt-1">{isMatchLive ? 'Batting...' : 'TBD'}</p>
+                )}
+              </div>
+            ) : (
+              <div className="h-8 w-20 bg-white/5 rounded-lg animate-pulse" />
+            )}
+          </div>
+
+          {/* Center ─ desktop: result text (large) · mobile: VS / ⚡ */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center px-2 md:px-4">
+            {/* Mobile only */}
+            <div className="md:hidden text-center">
+              {!hasScore ? (
+                <span className="text-[10px] font-black tracking-[0.2em] text-slate-700">VS</span>
+              ) : isMatchLive ? (
+                <span className="text-slate-600 text-xs">⚡</span>
+              ) : null}
+            </div>
+            {/* Desktop only */}
+            <div className="hidden md:block text-center max-w-[180px] lg:max-w-[220px]">
+              {resultText ? (
+                <p className="text-base lg:text-lg font-bold text-tertiary leading-snug">{resultText}</p>
+              ) : !hasScore ? (
+                <span className="text-[10px] font-black tracking-[0.2em] text-slate-700">VS</span>
+              ) : isMatchLive ? (
+                <span className="text-slate-600 text-base">⚡</span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Team 2 — right */}
+          <div className="flex items-center gap-2.5 md:gap-4 flex-1 min-w-0 flex-row-reverse">
+            <div className="w-11 h-11 md:w-16 md:h-16 flex-shrink-0 rounded-full bg-white/5 border border-white/10 p-1 md:p-1.5 flex items-center justify-center">
+              {t2 && <img src={`/logos/${t2.toLowerCase()}.png`} alt={t2}
+                className="w-full h-full object-contain drop-shadow-lg"
+                onError={e => { e.currentTarget.style.display = 'none'; }} />}
+            </div>
+            {t2 ? (
+              <div className="min-w-0 text-right">
+                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t2}</p>
+                {s2 ? (
+                  <>
+                    <p className="leading-none font-headline font-black text-on-surface">
+                      <span className="text-[22px] md:text-[34px]">{s2.runs}</span>
+                      <span className="text-slate-400 text-sm md:text-xl font-bold">/{s2.wkts}</span>
+                    </p>
+                    <p className="text-[9px] md:text-[10px] text-slate-600 font-medium mt-0.5">({s2.overs} ov)</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-600 font-bold mt-1">{isMatchLive ? 'Batting...' : 'TBD'}</p>
+                )}
+              </div>
+            ) : (
+              <div className="h-8 w-20 bg-white/5 rounded-lg animate-pulse" />
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* ─ Result strip — mobile only, tight spacing ──────────────── */}
+      {resultText && (
+        <div className="md:hidden px-4 pt-0 pb-3 text-center">
+          <p className="text-[10px] font-bold text-tertiary tracking-wide">{resultText}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────
    MobileLobby — rendered only below `md:` breakpoint
    ───────────────────────────────────────────────────────── */
 interface MobileLobbyProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   displayMatch: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  matchFixture: any; // lastMatch when recently finished, else displayMatch
   performerMatch: any;
   matchName: string;
+  liveScore: LiveMatch | null;
+  isRecentlyFinished: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   topPerformers: any[];
   topPerformersLoading: boolean;
@@ -43,43 +294,30 @@ interface MobileLobbyProps {
 }
 
 function MobileLobby({
-  displayMatch, performerMatch, matchName, topPerformers, topPerformersLoading, topPerformersMatchName,
+  matchFixture, performerMatch, liveScore, isRecentlyFinished,
+  topPerformers, topPerformersLoading, topPerformersMatchName,
   lobbySquad, lobbyTotalPoints, lobbyTeam, players, filteredPlayers, playersLoading,
   filterType, setFilterType, searchQuery, setSearchQuery, user, signInWithGoogle, router,
   isMatchLive,
 }: MobileLobbyProps & { isMatchLive: boolean }) {
   const [squadExpanded, setSquadExpanded] = useState(false);
 
-  // Use isMatchLive so we correctly show 'Live' even when match_status is stuck at '0'
-  const statusLabel = isMatchLive ? 'Live'
-    : displayMatch?.match_status === '2' ? 'Finished'
-    : 'Upcoming';
-  const statusColor = isMatchLive
-    ? 'bg-red-500/15 text-red-400'
-    : displayMatch?.match_status === '2'
-    ? 'bg-primary/10 text-primary'
-    : 'bg-amber-500/15 text-amber-400';
+
 
   return (
     <div className="md:hidden px-4 space-y-4">
 
-      {/* ── Match Card ── */}
-      <section
-        className="rounded-2xl p-4"
-        style={{ background: 'linear-gradient(135deg, rgba(126,81,255,0.18) 0%, rgba(99,102,241,0.08) 100%)' }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <span className={`text-[9px] font-black tracking-[0.15em] uppercase px-2.5 py-1 rounded-full ${statusColor}`}>
-            {statusLabel}
-          </span>
-          <button
-            onClick={() => !user ? signInWithGoogle() : router.push('/my-team')}
-            className="text-[9px] font-black tracking-[0.12em] uppercase px-3 py-1.5 rounded-xl bg-primary/20 text-primary active:scale-95 transition-transform"
-          >
-            Create Team
-          </button>
-        </div>
-        <h2 className="text-lg font-headline font-black text-on-surface leading-tight">{matchName}</h2>
+      {/* ── Match Header Card ── */}
+      <section>
+        <MatchHeader
+          isMatchLive={isMatchLive}
+          isRecentlyFinished={isRecentlyFinished}
+          liveScore={liveScore}
+          matchFixture={matchFixture}
+          user={user}
+          signInWithGoogle={signInWithGoogle}
+          router={router}
+        />
       </section>
 
       {/* ── Top Performers (horizontal scroll) ── */}
@@ -299,7 +537,7 @@ function MobileLobby({
 }
 
 export default function Lobby() {
-  const { displayMatch, performerMatch, activeGamedayId, isMatchLive, loading: fixturesLoading } = useFixtures();
+  const { displayMatch, performerMatch, lastMatch, activeGamedayId, isMatchLive, loading: fixturesLoading } = useFixtures();
   const { topPerformers, loading: topPerformersLoading } = useTopPerformers(activeGamedayId);
   const { players, loading: playersLoading } = useFantasyData();
   const { user, signInWithGoogle } = useAuth();
@@ -310,6 +548,21 @@ export default function Lobby() {
   const lobbySquad = lobbyTeam ? players.filter(p => lobbyTeam.selected_players?.includes(p.player_id)) : [];
   lobbySquad.sort((a, b) => (b.overall_points || 0) - (a.overall_points || 0));
   const lobbyTotalPoints = lobbySquad.reduce((sum, p) => sum + (p.overall_points || 0), 0);
+
+  // Show last match score for 8 h from match START
+  // (covers ~3.5h T20 + ~4.5h post-match display window)
+  const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
+  const isRecentlyFinished = !isMatchLive && lastMatch !== null && (() => {
+    const dt = lastMatch.match_datetime;
+    const matchTime = new Date(dt.endsWith('Z') ? dt : dt + 'Z').getTime();
+    return Date.now() - matchTime < EIGHT_HOURS_MS;
+  })();
+
+  // Use lastMatch fixture when recently finished (displayMatch would be the upcoming match)
+  const matchFixture = isRecentlyFinished ? lastMatch : displayMatch;
+
+  // Poll crictimes public JSON for live/recently-completed score
+  const liveScore = useLiveScore(isMatchLive, isRecentlyFinished);
 
   const [filterType, setFilterType] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -405,28 +658,17 @@ export default function Lobby() {
           ════════════════════════════════════════════════ */}
       <div className="hidden md:block space-y-8">
 
-        {/* Live Impact Section */}
-        <section>
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border mb-2 inline-block ${
-                displayMatch?.match_status === '1'
-                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                  : displayMatch?.match_status === '2'
-                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  : 'bg-tertiary-container/20 text-tertiary-fixed-dim border-tertiary-fixed-dim/20'
-              }`}>
-                {isMatchLive ? 'Live' : displayMatch?.match_status === '2' ? 'Finished' : 'Upcoming'}
-              </span>
-              <h2 className="text-3xl font-headline font-black tracking-tight text-on-surface">{matchName}</h2>
-            </div>
-            <button
-              onClick={() => !user ? signInWithGoogle() : router.push('/my-team')}
-              className="bg-surface-container-high text-primary font-headline font-bold py-3 px-6 rounded-xl text-[10px] tracking-widest uppercase cursor-pointer hover:bg-surface-container-highest transition-all duration-200"
-            >
-              Create your team
-            </button>
-          </div>
+        {/* Match Header */}
+        <section className="mb-6">
+          <MatchHeader
+            isMatchLive={isMatchLive}
+            isRecentlyFinished={isRecentlyFinished}
+            liveScore={liveScore}
+            matchFixture={matchFixture}
+            user={user}
+            signInWithGoogle={signInWithGoogle}
+            router={router}
+          />
         </section>
 
         <div className="grid grid-cols-12 gap-8">
@@ -588,8 +830,11 @@ export default function Lobby() {
           ════════════════════════════════════════════════ */}
       <MobileLobby
         displayMatch={displayMatch}
+        matchFixture={matchFixture}
         performerMatch={performerMatch}
         matchName={matchName}
+        liveScore={liveScore}
+        isRecentlyFinished={isRecentlyFinished}
         topPerformers={topPerformers}
         topPerformersLoading={topPerformersLoading}
         topPerformersMatchName={topPerformersMatchName}

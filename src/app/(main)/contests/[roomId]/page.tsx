@@ -1130,7 +1130,9 @@ function TeamDetailView({ participant, allParticipants, players, isModifyTeams, 
                 {loading ? (
                   <th className="px-3 py-2.5 text-[8px] font-black uppercase tracking-widest text-slate-600">Loading…</th>
                 ) : matchCols.map(n => (
-                  <th key={n} className="w-9 py-2.5 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">M{n}</th>
+                  <th key={n} className="w-9 py-2.5 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap"
+                  style={{ background: 'rgb(13,18,30)' }}
+                  >M{n}</th>
                 ))}
                 <th className="px-3 py-2.5 text-[8px] font-black uppercase tracking-widest text-primary text-right sticky right-0 z-20 min-w-[44px]"
                   style={{ background: 'rgb(13,18,30)' }}>
@@ -1171,8 +1173,8 @@ function TeamDetailView({ participant, allParticipants, players, isModifyTeams, 
                 return (
                   <tr key={player.player_id} className="hover:bg-white/5 transition-colors">
                     {/* Sticky player column */}
-                    <td className="px-3 py-3 sticky left-0 z-10" style={{ background: stickyBg }}>
-                      <p className="text-xs font-headline font-bold text-on-surface truncate max-w-[100px]">{player.name}</p>
+                    <td className="px-3 py-3 sticky left-0 z-10" style={{ background: '#0f1829' }}>
+                      <p className="text-xs font-headline font-bold text-on-surface truncate max-w-[160px]">{player.name}</p>
                       <p className="text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate"
                         style={{ color: teamColor || '#64748b' }}>
                         {player.team_short_name} · {formatSkillName(player.skill_name)}
@@ -1193,7 +1195,7 @@ function TeamDetailView({ participant, allParticipants, players, isModifyTeams, 
                     })}
                     {/* Sticky total column */}
                     <td className="px-3 py-3 text-right font-headline font-black text-tertiary text-xs sticky right-0 z-10"
-                      style={{ background: stickyBg }}>
+                      style={{ background: '#0f1829' }}>
                       {totalPts}
                     </td>
                   </tr>

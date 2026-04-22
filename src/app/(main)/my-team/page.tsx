@@ -695,7 +695,7 @@ export default function MyTeamPage() {
                         style={{ background: stickyBg }}>
                         <div className="flex items-center gap-1">
                           <div>
-                            <p className="text-xs font-headline font-bold text-on-surface truncate max-w-[100px]">{player.name}</p>
+                            <p className="text-xs font-headline font-bold text-on-surface truncate max-w-[160px]">{player.name}</p>
                             <p className="text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate"
                               style={{ color: teamCfg?.color || '#64748b' }}>
                               {player.team_short_name} · {formatSkillName(player.skill_name)}
