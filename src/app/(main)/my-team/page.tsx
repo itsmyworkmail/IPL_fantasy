@@ -18,7 +18,7 @@ const TEAM_CONFIG: Record<string, { color: string; bg: string }> = {
   'SRH': { color: '#F7812A', bg: 'rgba(247,129,42,0.10)' },
   'DC':  { color: '#3DA4E8', bg: 'rgba(61,164,232,0.10)' },
   'PBKS':{ color: '#F43F5E', bg: 'rgba(244,63,94,0.10)' },
-  'RR':  { color: '#6B8FD9', bg: 'rgba(107,143,217,0.10)' },
+  'RR':  { color: '#dd55adff', bg: 'rgba(107,143,217,0.10)' },
   'GT':  { color: '#5B85C8', bg: 'rgba(91,133,200,0.10)' },
   'LSG': { color: '#B5D95A', bg: 'rgba(181,217,90,0.10)' },
 };

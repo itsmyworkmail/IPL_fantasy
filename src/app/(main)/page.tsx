@@ -84,40 +84,51 @@ interface MatchHeaderProps {
   router: AppRouterInstance;
 }
 
+/* ── Crictimes API abbreviation aliases ───────────────────────────────────────
+   Some teams are abbreviated differently in the Crictimes API vs our fixture DB.
+   Add new entries here if more mismatches appear in the future.
+   Keys are lowercase Crictimes abbreviations → values are our short-name (lowercase).
+   ──────────────────────────────────────────────────────────────────────────── */
+const CRICTIMES_ALIASES: Record<string, string> = {
+  raj:  'rr',   // Rajasthan Royals
+  kxip: 'pbks', // Punjab Kings
+};
+function normalizeAbbrev(raw: string): string {
+  const lower = raw.toLowerCase();
+  return CRICTIMES_ALIASES[lower] ?? lower;
+}
+
 function MatchHeader({ isMatchLive, isRecentlyFinished, liveScore, matchFixture, user, signInWithGoogle, router }: MatchHeaderProps) {
   // ── Score display order: t_one batted first (LEFT), t_two batted second (RIGHT) ──
-  // Scores are always shown in batting order — no swapping needed.
   const s1 = parseScore(liveScore?.t_one_s); // left  (batted 1st)
   const s2 = parseScore(liveScore?.t_two_s); // right (batted 2nd)
 
   // ── Display names: prefer fixture names (correct short codes) ──────────────
-  // API may abbreviate differently (RAJ vs RR, KXIP vs PBKS).
-  // We check if apiT1/apiT2 match either fixture team name (case-insensitive).
-  // Matched teams use the fixture's clean short name; unmatched fall back to the API string.
+  // Crictimes API may use old/different abbreviations (RAJ vs RR, KXIP vs PBKS).
+  // We normalise API abbreviations through CRICTIMES_ALIASES before matching.
   const homeTeam = matchFixture?.home_team_short_name ?? '';
   const awayTeam = matchFixture?.away_team_short_name ?? '';
   let t1 = liveScore?.t_one ?? homeTeam; // left display name
   let t2 = liveScore?.t_two ?? awayTeam; // right display name
 
   if (liveScore && (homeTeam || awayTeam)) {
-    const apiT1 = liveScore.t_one.toLowerCase();
-    const apiT2 = liveScore.t_two.toLowerCase();
+    // Normalise through alias table so "raj"→"rr", "kxip"→"pbks" etc.
+    const apiT1 = normalizeAbbrev(liveScore.t_one);
+    const apiT2 = normalizeAbbrev(liveScore.t_two);
     const homeLower = homeTeam.toLowerCase();
     const awayLower = awayTeam.toLowerCase();
 
-    // Direct match: t_one abbreviation matches a fixture team
+    // Direct (possibly aliased) match: t_one
     let t1Resolved = false;
     if (apiT1 === homeLower)      { t1 = homeTeam; t1Resolved = true; }
     else if (apiT1 === awayLower) { t1 = awayTeam; t1Resolved = true; }
 
-    // Direct match: t_two abbreviation matches a fixture team
+    // Direct (possibly aliased) match: t_two
     let t2Resolved = false;
     if (apiT2 === awayLower)      { t2 = awayTeam; t2Resolved = true; }
     else if (apiT2 === homeLower) { t2 = homeTeam; t2Resolved = true; }
 
-    // Cross-deduction by elimination:
-    // If one side matched, the other must be the remaining fixture team.
-    // e.g. apiT2="lsg" matched awayTeam → apiT1="raj" (unknown) must be homeTeam (RR).
+    // Cross-deduction: if one side matched, the other is the remaining fixture team.
     if (!t1Resolved && t2Resolved) t1 = (t2 === awayTeam) ? homeTeam : awayTeam;
     if (!t2Resolved && t1Resolved) t2 = (t1 === homeTeam) ? awayTeam : homeTeam;
   }

@@ -18,7 +18,7 @@ import { DailyContestRoom } from '@/components/DailyContestRoom';
 // Official IPL team colors (same as My Team page)
 const TEAM_COLOR: Record<string, string> = {
   'CSK': '#FFD700', 'MI': '#004BA0', 'RCB': '#D4001C', 'KKR': '#3A225D',
-  'SRH': '#F7812A', 'DC': '#0078BC', 'PBKS': '#ED1B24', 'RR': '#254AA5',
+  'SRH': '#F7812A', 'DC': '#0078BC', 'PBKS': '#ED1B24', 'RR': '#dd55adff',
   'GT': '#1B4087', 'LSG': '#A7CC44',
 };
 
